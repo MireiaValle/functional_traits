@@ -24,56 +24,66 @@ library(FishLife)
 #                 type="source")
 library (rfishbase)
 
-#WORKING DIRECTORY
-setwd("/home/valle/WP1")
+#See WORKING DIRECTORY
+getwd()
 
 ################################################################################################
 ## LOADING AQUAMAPS DATA 
 ###############################################################################################
 
 #Loading species list 
-species <- read.csv('Aquamaps/csv/speciesoccursum_speccode.csv',sep=',', header = TRUE)
+species <- read.csv('/home/valle/github_annex/Aquamaps/csv/speciesoccursum_speccode.csv',sep=',', header = TRUE)
 head (species)
 summary (species)
 
 
 #habitat suitability
-hs <- read.csv('Aquamaps/csv/hcaf_species_native.csv',sep=',', header = TRUE)
+hs <- read.csv('/home/valle/github_annex/Aquamaps/csv/hcaf_species_native.csv',sep=',', header = TRUE)
 head (hs)
 summary (hs)
 colnames (hs)
 colnames (hs)<- c("SPECIESID", "CsquareCode", "probability", "FAOAreaYN" ,  "BoundBoxYN" )
 colnames (hs)
-
+#save the results
+write.csv (hs, file = "hs")
 
 #xyz (location + variables)
-xyz <- read.csv('Aquamaps/csv/hcaf_v6.csv',sep='\t', header = TRUE)
+xyz <- read.csv('/home/valle/github_annex/Aquamaps/csv/hcaf_v6.csv',sep='\t', header = TRUE)
 head (xyz)
 colnames (xyz)
+#save the results
+write.csv (xyz, file = "xyz")
 
 #-PREPARING OUR DATA MERGING AQUAMAPS+FISHLIFE+FISHBASE with HS AND XYZ-----------------------------------------------------------------------#
 
 #cuando tengamos lista la tabla con todos los datos de los functional traits aplicaremos el siguiente código a esa tabla
 #read species life traits table (species_lt), the table we got from FishLife
-species_lt <- read.csv('species_lt.csv')
+rm(species)
+species_lt <- read.csv('/home/valle/github_annex/species_lt.csv')
 as.tibble (species_lt)
 head (species_lt)
 aquamaps_keyed <- data.table(species_lt, key = "SPECIESID") 
 head (aquamaps_keyed)
 class(aquamaps_keyed)
+rm(species_lt)
 
 #important columns in this table are: SPECIESID and CsquareCode
 head (hs)
 hs_keyed <- data.table(hs,  key = "SPECIESID")
 head (hs_keyed)
 class(hs_keyed)
-
+rm(hs)
 
 #new table joining both tables by SpeciesID field. 
 species_hs <- hs_keyed[aquamaps_keyed] %>%
   setkey(NULL)
 head (species_hs)
 colnames (species_hs)
+rm(aquamaps_keyed)
+rm (hs_keyed)
+
+#save the results
+write.csv (species_hs, file = "species_hs")
 
 #code for replacing CSquareCode with LOICZID
 
@@ -109,8 +119,9 @@ write_csv(species_hs, species_hs_file)
 # Importing raster with LOICID value into the RasterLayer format  #
 #------------------------------------------------------------------------------------- #
 
-basemap<-raster("loiczid.tif")        
+basemap<-raster("/home/valle/github_annex/loiczid.tif")        
 plot (basemap)
 basemap
+
 
 
