@@ -153,7 +153,10 @@ rm (species_lt2018_subset)
 
 ##hs:table with information about the probability of occurrence of species and different environmental variables
 ```{r}
-hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'ccidiidd')
+hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'ccddiidd', guess_max = 100000)
+
+hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'cc?diidd', guess_max = 100000)
+ 
 ```
 #col_types:
 #c = character,
