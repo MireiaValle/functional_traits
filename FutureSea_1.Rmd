@@ -23,27 +23,20 @@ library(sp)
 library(raster)       #Main raster library with nearly all functions used in this analysis
 library(rgdal)        #Spatial library - most functions used from rgdal are for vectors (shapefiles)
 library(maptools)
-```
 ##Libraries for data management
-```{r} 
 library (tidyverse) 
 library (data.table)
 library (reshape)
-```
 ##Specific libraries for getting functional traits
 ###FishLife
-```{r}
 #devtools::install_github("DanOvando/FishLife", ref= "query-fishlife")
 library(FishLife)
-```
 ###Fishbase
-```{r}
 #install.packages("rfishbase", 
 #                 repos = c("http://packages.ropensci.org", "http://cran.rstudio.com"), 
 #                 type="source")
 library (rfishbase)
 ```
-
 #LOADING AQUAMAPS SPECIES DATA 2018 ---------------------------------------------------------------------------------
 
 ##Loading species list 
@@ -87,7 +80,8 @@ species_lt2018<- df %>%
   mutate(fish_life_worked = map(life_traits, 'error') %>% map_lgl(is.null)) %>%
   filter(fish_life_worked) %>%
   mutate(life_traits = map(life_traits, 'result')) %>%
-  unnest() 
+  unnest() %>% 
+  mutate(sciname = paste(Genus, Species))
 ```
 ##See results
 ```{r}
@@ -159,8 +153,20 @@ rm (species_lt2018_subset)
 
 ##hs:table with information about the probability of occurrence of species and different environmental variables
 ```{r}
-hs <- read.csv('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv',sep=',', header = TRUE)
+hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'ccidiidd')
 ```
+#col_types:
+#c = character,
+#i = integer, 
+#n = number, 
+#d = double, 
+#l = logical, 
+#f = factor, 
+#D = date, 
+#T = date time, 
+#t = time, 
+#? = guess
+
 ##See head
 ```{r}
 head (hs)
@@ -178,9 +184,14 @@ colnames (hs)<-c("SPECIESID","CsquareCode","LOICZID","probability","FAOAreaYN","
 colnames (hs)
 head (hs)
 ```
+## See if there are NAs
+```{r}
+sum(is.na(hs$CsquareCode))
+sum(is.na(hs$LOICZID))
+```
 ##Subset hs table, we are interested in SPECIESID and CsquareCode columns only
 ```{r}
-hs_subset <- subset(hs, select=c("SPECIESID", "CsquareCode"))
+hs_subset <- subset(hs, select=c("SPECIESID", "CsquareCode", "LOICZID","probability"))
 ```
 ##Remove hs table from R environment
 ```{r}
@@ -322,6 +333,12 @@ plot (basemap)
 writeRaster(basemap, "basemap", format = "GTiff")
 ```
 
+###Read raster
+```{r}
+basemap <- raster ("/home/valle/github_annex/basemap.tif")
+```
+
+
 ## 2.- Then we load the data.frame where we can find the variable we want to map. We will map salintity Min in this case ----------------------------------------------------------------------------------------------------------------
 ```{r}
 xyz <- read.csv('/home/valle/github_annex/Aquamaps/d2018/hcaf_v6.csv',sep='\t',header = TRUE)
@@ -381,4 +398,82 @@ fis_hs <- subset (fis, select=c("LOICZID", "probability"))
 fis_map <- subs (basemap, fis_hs, by="LOICZID", which= "probability")
 plot (fis_map)
 ```
+
+##PREPARING THE DATA TO CALCULATE FUNCTIONAL DIVERSITY INDEXES-------------------------------------------------------
+
+head(species_hs)
+unique (species_hs$LOICZID) %>% length()
+unique (species_hs$SPECIESID) %>% length()
+
+species_hs_subset<- subset(species_hs, select=c("SPECIESID", "LOICZID","probability"))
+head (species_hs_subset)
+
+### use spread() to turn the species ID values into column names, with the prob as the value in the cell
+prueba <- read.csv('prueba.csv',sep=',', header = TRUE)
+head (prueba)
+prueba_matrix <- prueba %>% spread(SPECIESID, probability)
+head (prueba_matrix)
+
+species_hs_subset_id <- tibble::rowid_to_column(species_hs_subset)
+head (species_hs_subset_id)
+loiczid_sps_matrix <- species_hs_subset_id %>% spread(SPECIESID, probability)
+
+###distinct() will drop any duplicated rows (keeping only one version of each distinct observation), which seems like the problem - see if spp_hs_subset has fewer rows than spp_hs
+
+spp_hs_subset <- species_hs_subset %>%
+  select(SPECIESID, LOICZID, probability) %>%
+  distinct()
+
+nrow(spp_hs_subset)
+nrow (species_hs_subset)
+
+### use spread() to turn the species ID values into column names, with the prob as the value in the cell
+loiczid_sps_matrix <- spp_hs_subset %>% spread(SPECIESID, probability)
+
+head(spp_hs_subset)
+
+asdf <- spp_hs_subset[c(555527, 555528, 555529, 555530), ]
+
+asdf
+
+unique (spp_hs_subset$LOICZID) %>% length()
+unique (spp_hs_subset$SPECIESID) %>% length()
+
+
+colSums(is.na(species_loiczid))
+
+total <- rbind(data frameA, data frameB) 
+
+
+```{r}
+hs_wide <- hs %>%
+  mutate(LatLon = paste(CenterLat, CenterLong)) %>%
+  select(LatLon, SpeciesID, probability) %>%
+  spread(SpeciesID, probability)
+```
+
+```{r}
+head (species_lt2018)
+sp_lt2018 <- mutate(species_lt2018, sciname = paste(Genus, Species))
+head (sp_lt2018)
+```
+
+jc <- hs %>% 
+  filter (is.na(LOICZID))%>%
+  group_by(CenterLat, CenterLong)%>%
+  count ()%>%
+  ggplot(aes(x=CenterLong, y=CenterLat, fill=n))
+  
+  
+  
+fishbase_traits <- read.csv('fishbase_species_select.csv',sep=',', header = TRUE)
+head (fishbase_traits)
+summary (fishbase_traits)
+
+Leftjoin
+?left_join
+head (sp_lt2018)
+
+spp_FT <- left_join (sp_lt2018,fishbase_traits, by = "sciname", copy = FALSE, suffix = c(".x", ".y"))
+
 
