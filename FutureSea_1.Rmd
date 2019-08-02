@@ -5,7 +5,7 @@ date: "7/25/2019"
 output: html_document
 ---
 
-#WORKING DIRECTORY----------------------------------------------------------------------------------------------------
+#SETTING WORKING DIRECTORY----------------------------------------------------------------------------------------------------
 ```{r}
 getwd()
 ##Working on the server
@@ -37,17 +37,24 @@ library(FishLife)
 #                 type="source")
 library (rfishbase)
 ```
-#LOADING AQUAMAPS SPECIES DATA 2018 ---------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------#
+#LOADING AQUAMAPS SPECIES DATA 2018 AND GETTING FUNCTIONAL TRAITS FROM FishLife
+##We only need to run this one time, then you go straight to the next step: #2.- LOADING FUNCTIONAL TRAITS GOTTEN FROM FishLife
+#---------------------------------------------------------------------------------
 
 ##Loading species list 
 ```{r}
-species <- read.csv('/home/valle/github_annex/Aquamaps/d2018/speciesoccursum_ver0816c.csv',sep=',', header = TRUE)
-head (species)
-summary (species)
-```
+#Reading data from MAZU
+#species <- read_csv ('/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps/d2018/speciesoccursum_ver0816c.csv',sep=',', header = TRUE)
 
-#GETTING FUNCTIONAL TRAITS FROM FishLife----------------------------------------------------------------------------
-##We only need to run this one time, then you go straight to the next step: *Loading Functional Traits gotten from FishLife*
+#From my laptop
+#species <- read.csv('/home/valle/github_annex/Aquamaps/d2018/speciesoccursum_ver0816c.csv',sep=',', header = TRUE)
+#head (species)
+#colnames (species)
+#summary (species)
+#str(species)
+#unique (species$SPECIESID) %>% length()#24904
+```
 
 ##Notes on FishLife
 ###https://github.com/James-Thorson/FishLife
@@ -68,50 +75,53 @@ summary (species)
 ```
 ##We rename the species list data from aquamaps
 ```{r}
-df <- species 
-as.tibble (df)
+#df <- species 
+#as.tibble (df)
 ```
 ##For a dataframe with SEPARATE 'genus' and 'species' columns (e.g., 'Thunnus','thynnus'), run the following: 
 ```{r}
-sfg = safely(Get_traits)
+#sfg = safely(Get_traits)
 
-species_lt2018<- df %>% 
-  mutate(life_traits = map2(Genus, Species, ~(sfg(Genus=.x, Species=.y)))) %>%
-  mutate(fish_life_worked = map(life_traits, 'error') %>% map_lgl(is.null)) %>%
-  filter(fish_life_worked) %>%
-  mutate(life_traits = map(life_traits, 'result')) %>%
-  unnest() %>% 
-  mutate(sciname = paste(Genus, Species))
+#species_lt2018<- df %>% 
+#  mutate(life_traits = map2(Genus, Species, ~(sfg(Genus=.x, Species=.y)))) %>%
+#  mutate(fish_life_worked = map(life_traits, 'error') %>% map_lgl(is.null)) %>%
+#  filter(fish_life_worked) %>%
+#  mutate(life_traits = map(life_traits, 'result')) %>%
+#  unnest() %>% 
+#  mutate(sciname = paste(Genus, Species))
 ```
 ##See results
 ```{r}
-as.tibble (species_lt2018) 
+#as.tibble (species_lt2018) 
+#head (species_lt2018)
+#colnames (species_lt2018)
+#str(species_lt2018)
+#unique (species_lt2018$SPECIESID) %>% length()#12368
+#unique (species_lt2018$fish_life_worked) 
 ```
-##See summary of the results
+##We subset the table with the columns we want to keep
 ```{r}
-summary (species_lt2018)
-```
-##Remove both dataframe
-```{r}
-rm(df)
-rm (species)
+#species_lt2018 <- subset(species_lt2018, select=c("SPECIESID", "SpecCode", "Genus", "Species","sciname", "FBname", #"Kingdom", "Phylum", "Class", "Order", "Family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "Temperature" ))
+#head (species_lt2018)
 ```
 ##Save the results
 ```{r}
-write.csv (species_lt2018, file = "species_lt2018.csv")
+#write.csv (species_lt2018, file = "species_lt2018.csv")
+```
+##Remove both dataframe
+```{r}
+#rm(df)
+#rm (species)
 ```
 
-#LOADING FUNCTIONAL TRAITS GOTTEN FROM FishLife ---------------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------#
+#2.- LOADING FUNCTIONAL TRAITS GOTTEN FROM FishLife 
+#-------------------------------------------------------------------------------------------------------------------#
 
 ##Read species life traits table (species_lt2018), the table we got from FishLife
 ```{r}
 species_lt2018 <- read.csv('species_lt2018.csv')
 as.tibble (species_lt2018)
-```
-##We subset the table with the columns we want to keep
-```{r}
-species_lt2018 <- subset(species_lt2018, select=c("SPECIESID", "SpecCode", "Genus", "Species","FBname", "Kingdom", "Phylum", "Class", "Order", "Family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "Temperature" ))
-head (species_lt2018)
 ```
 ##Analysing the data
 ```{r}
@@ -125,17 +135,19 @@ cor (lt_matrix)
 plot (lt_matrix$Loo~lt_matrix$Lm)
 ```
 
-#PREPARING THE DATA TO GET SPECIES SPATIAL DISTRIBUTION -------------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------#
+#3.- PREPARING THE DATA TO GET SPECIES SPATIAL DISTRIBUTION 
+#-------------------------------------------------------------------------------------------------------------------#
 
 ##Read species life traits table (species_lt2018), the table we got from FishLife
 ```{r}
-species_lt2018 <- read.csv('species_lt2018.csv')
-as.tibble (species_lt2018)
-colnames (species_lt2018)
+#species_lt2018 <- read.csv('species_lt2018.csv')
+#as.tibble (species_lt2018)
+#colnames (species_lt2018)
 ```
 ##Subsetting the table to reduce the number of columns
 ```{r}
-species_lt2018_subset <- subset(species_lt2018, select=c("SPECIESID", "Genus", "Species"))
+species_lt2018_subset <- subset(species_lt2018, select=c("SPECIESID", "sciname"))
 ```
 ##Removing the complete
 ```{r}
@@ -149,14 +161,16 @@ species_lt2018_keyed <- data.table(species_lt2018_subset, key = "SPECIESID")
 ```{r}
 rm (species_lt2018_subset)
 ```
-#LOADING AQUAMAPS DATA ABOUT SPECIES DISTRIBUTION AND ENVIRONMENTAL DATA AND SPATIAL INFORMATION 2018----------------
+#-------------------------------------------------------------------------------------------------------------------#
+#4.- LOADING AQUAMAPS DATA ABOUT SPECIES DISTRIBUTION AND ENVIRONMENTAL DATA AND SPATIAL INFORMATION 2018
+#-------------------------------------------------------------------------------------------------------------------#
 
 ##hs:table with information about the probability of occurrence of species and different environmental variables
 ```{r}
-hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'ccddiidd', guess_max = 100000)
+#hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'cc?diidd', guess_max = 100000)
 
-hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'cc?diidd', guess_max = 100000)
- 
+#Reading data from MAZU
+hs <- read_csv ('/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps/d2018/hcaf_species_native_ver0816c.csv', col_names = TRUE, col_types = 'cc?diidd', guess_max = 100000)
 ```
 #col_types:
 #c = character,
@@ -170,13 +184,13 @@ hs <- read_csv ('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver
 #t = time, 
 #? = guess
 
-##See head
+##See head, colnames and str
 ```{r}
 head (hs)
-```
-##See col names in hs
-```{r}
 colnames (hs)
+str(hs)
+unique (hs$SpeciesID) %>% length()#24904
+
 ```
 ##Change SpeciesID by SPECIESID
 ```{r}
@@ -190,12 +204,18 @@ head (hs)
 ## See if there are NAs
 ```{r}
 sum(is.na(hs$CsquareCode))
-sum(is.na(hs$LOICZID))
+sum(is.na(hs$LOICZID)) #44138318
 ```
 ##Subset hs table, we are interested in SPECIESID and CsquareCode columns only
 ```{r}
-hs_subset <- subset(hs, select=c("SPECIESID", "CsquareCode", "LOICZID","probability"))
+hs_subset <- subset(hs, select=c("SPECIESID", "CsquareCode", "LOICZID","probability", "CenterLat", "CenterLong" ))
 ```
+##Check if the changes have been done
+```{r}
+colnames (hs_subset)
+head (hs_subset)
+```
+
 ##Remove hs table from R environment
 ```{r}
 rm (hs)
@@ -203,6 +223,7 @@ rm (hs)
 ##Keying the hs table to join it later
 ```{r}
 hs_keyed <- data.table(hs_subset,  key = "SPECIESID")
+```
 ##See head
 ```{r}
 head (hs_keyed)
@@ -220,37 +241,48 @@ rm(hs_subset)
 species_hs <- hs_keyed[species_lt2018_keyed] %>%
   setkey(NULL)
 ```
-##See head of the new table
+##See head, colnames and str
 ```{r}
 head (species_hs)
-```
-##See columns names
-```{r}
 colnames (species_hs)
+str(species_hs)
+unique (species_hs$SPECIESID) %>% length()#12368
 ```
 ##Remove the keyed tables
 ```{r}
 rm(species_lt2018_keyed)
 rm (hs_keyed)
 ```
-
-#REPLACE CSquareCode with LOICZID ------------------------------------------------------
+#-------------------------------------------------------------------------------------------------------------------#
+#5.- REPLACE CSquareCode with LOICZID 
+#-------------------------------------------------------------------------------------------------------------------#
 ##Load xyz data (location + variables)
 ###xyz data frame contains information on the location of each cell and the value of diferente variables on that cell
 ```{r}
+#From MAZU
+
+xyz<- read_csv ('/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps/d2018/hcaf_v6.csv',sep='\t',header = TRUE)
+
+#From my laptop
 xyz <- read.csv('/home/valle/github_annex/Aquamaps/d2018/hcaf_v6.csv',sep='\t',header = TRUE)
 ```
-##See head
+##See head, colnames and str
 ```{r}
 head (xyz)
-```
-##See columns names
-```{r}
 colnames (xyz)
+str(xyz)
+unique (xyz$LOICZID) %>% length()#259200
 ```
 ##Create a subset with the columns we need
 ```{r}
-xyz_subset <- subset(xyz, select=c("CsquareCode", "LOICZID"))
+xyz_subset <- subset(xyz, select=c("CsquareCode", "LOICZID", "CenterLat", "CenterLong"))
+```
+##See head, colnames and str
+```{r}
+head (xyz_subset)
+colnames (xyz_subset)
+str(xyz_subset)
+unique (xyz_subset$LOICZID) %>% length()#259200
 ```
 ##Remove the complete table
 ```{r}
@@ -277,12 +309,12 @@ class (csq_loiczid)
 ```{r}
 species_loiczid <- csq_loiczid[species_hs_keyed]
 head (species_loiczid)
-species_loiczid <- subset(species_loiczid, select=c("LOICZID", "SPECIESID"))
+species_loiczid <- subset(species_loiczid, select=c("LOICZID", "SPECIESID","CenterLat", "CenterLong"))
 head (species_loiczid)
 ```
 ##Save the results
 ```{r}
-write.csv (species_loiczid, file = "species_loiczid.csv")
+#write.csv (species_loiczid, file = "species_loiczid.csv")
 ```
 ##Read table
 ```{r}
@@ -298,7 +330,7 @@ unique (species_loiczid$SPECIESID) %>% length()#12368
 ```
 ##See if there are any NAs
 ```{r}
-table(is.na (species_loiczid))
+#table(is.na (species_loiczid))
 ```
 
 #------------------------------------------------------------------------------------------------------------------ #
@@ -316,6 +348,35 @@ basemap <- raster (ext= extent (c(-180,180, -90, 90)), res=0.5)
 ```{r}
 values (basemap) <- 1:length (basemap)
 basemap
+
+
+loiczid_df <- rasterToPoints(basemap) %>%
+  as.data.frame() %>%
+  setNames(c('CenterLat', 'CenterLong', 'cell_id'))
+
+head(loiczid_df)
+as.tibble(loiczid_df)
+as.tibble (species_hs_keyed)
+unique (species_hs_keyed$SPECIESID) %>% length()#12368
+
+species_df <- subset(species_hs_keyed, select=c("LOICZID", "SPECIESID","probability", "CenterLat", "CenterLong"))
+
+joint_hs <- left_join (species_df, loiczid_df,copy = FALSE, suffix = c(".x", ".y"))
+head (joint_hs)
+unique (joint_hs$SPECIESID) %>% length()#12368
+unique (joint_hs$LOICZID) %>% length()#168635
+sum(is.na(joint_hs$LOICZID))
+sum(is.na(joint_hs$SpeciesID))
+sum(is.na(joint_hs$probability))
+sum(is.na(joint_hs$cell_id))
+
+write.csv (loiczid_df, file = "loiczid_df.csv")
+write.csv (species_df, file = "species_df.csv")
+
+ggplot(joint_hs, aes(x = CenterLong, y = CenterLat, fill = cell_id)) + geom_raster()
+
+head(joint_hs)
+
 ```
 #class       : RasterLayer 
 #dimensions  : 360, 720, 259200  (nrow, ncol, ncell)
@@ -393,13 +454,15 @@ plot (allspecies_map)
 
 ```{r}
 head(hs)
+fis1<- hs[hs$SpeciesID == "Fis-22703",]
+head (fis1)
 
-fis<- hs[hs$SpeciesID == "Fis-22703",]
-head (fis)
+fis2<- joint_hs2[joint_hs2$SpeciesID == "Fis-22703",]
+head (fis2)
 
-fis_hs <- subset (fis, select=c("LOICZID", "probability"))
-fis_map <- subs (basemap, fis_hs, by="LOICZID", which= "probability")
-plot (fis_map)
+fis2_hs <- subset (fis2, select=c("LOICZID", "probability"))
+fis2_map <- subs (basemap, fis2_hs, by="LOICZID", which= "probability")
+plot (fis2_map)
 ```
 
 ##PREPARING THE DATA TO CALCULATE FUNCTIONAL DIVERSITY INDEXES-------------------------------------------------------
@@ -449,11 +512,13 @@ total <- rbind(data frameA, data frameB)
 
 
 ```{r}
-hs_wide <- hs %>%
+species_hs_wide <- species_hs %>%
   mutate(LatLon = paste(CenterLat, CenterLong)) %>%
   select(LatLon, SpeciesID, probability) %>%
   spread(SpeciesID, probability)
 ```
+
+write.csv (species_lt2018, file = "species_lt2018.csv")
 
 ```{r}
 head (species_lt2018)
@@ -479,4 +544,10 @@ head (sp_lt2018)
 
 spp_FT <- left_join (sp_lt2018,fishbase_traits, by = "sciname", copy = FALSE, suffix = c(".x", ".y"))
 
+##-------------------------------------------------------------------------------------------------------------------
+# CALCULATING FUNCTIONAL DIVERSITY
+##-------------------------------------------------------------------------------------------------------------------
+
+#Loading required packages
+library (FD) #install.packages ("FD")
 
