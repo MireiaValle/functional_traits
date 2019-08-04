@@ -1,0 +1,93 @@
+---
+title: "Fixing the messed up AquaMaps spp cell file"
+author: "Casey O'Hara"
+date: "8/3/2019"
+output: html_document
+---
+
+```{r setup}
+library(raster)
+library (tidyverse) 
+library (data.table)
+```
+
+### Load species list and species-cell data
+
+```{r}
+dir_am <- '/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps'
+
+spp_cells <- data.table::fread(file.path(dir_am, 'd2018/hcaf_species_native_ver0816c.csv'))
+  ### fread() way faster
+spp_cells_clean <- spp_cells %>%
+  setNames(tolower(names(.))) %>%
+  select(am_sid = speciesid, loiczid_error = loiczid, prob = probability, lat = centerlat, long = centerlong)
+
+head(spp_cells_clean)
+```
+
+```{r check loiczid NAs}
+test_df <- spp_cells_clean %>%
+  select(loiczid_error, lat, long) %>%
+  distinct()
+
+nrow(test_df)
+
+sum(is.na(test_df$loiczid_error))
+```
+
+Length should be no larger (and certainly smaller) than 259200 (i.e. 180 * 2 * 360 * 2).  Some lat/longs have NA and numeric LOICZID.
+
+### Create a dataframe of lat/long to LOICZID.
+
+Create a generic raster, fill the cells horizontally from upper left to bottom right - this is equivalent to LOICZID values.  Then convert that raster to a dataframe with `lat`, `long`, and `loiczid` values.
+
+```{r create lat long to loiczid lookup}
+basemap <- raster(ext = extent (c(-180, 180, -90, 90)), 
+                  res = 0.5)
+values (basemap) <- 1:length (basemap)
+plot(basemap)
+
+base_df <- rasterToPoints(basemap) %>%
+  as.data.frame() %>%
+  setNames(c('long', 'lat', 'loiczid')) %>%
+  mutate(loiczid = as.integer(loiczid))
+```
+
+Using lat and long as spatial references common to both `spp_cells` and `base_df`, join fixed LOICZID values to the `spp_cells` dataframe.  Use `data.table` keyed join!
+
+```{r attach new loiczids to species cells}
+spp_cells_dt <- spp_cells_clean %>%
+  data.table(key = c('lat', 'long'))
+base_dt <- base_df %>%
+  data.table(key = c('lat', 'long'))
+
+spp_cells_fixed_dt <- base_dt[spp_cells_dt]
+```
+
+Check again to see if the values are cleaned up:
+
+```{r check loiczid NAs again}
+test_df <- spp_cells_fixed_dt %>%
+  select(loiczid, lat, long) %>%
+  distinct()
+
+nrow(test_df)
+
+sum(is.na(test_df$loiczid_error))
+
+head(spp_cells_fixed_dt)
+```
+
+That's more like it!  no NAs
+
+### Write out the new corrected data
+
+```{r}
+spp_cells_final <- spp_cells_fixed_dt %>%
+  select(am_sid, loiczid, prob) %>%
+  distinct()
+
+data.table::fwrite(spp_cells_final, 
+                   file.path(dir_am, 'd2018/hcaf_species_native_ver0816c_fixed.csv'))
+```
+
