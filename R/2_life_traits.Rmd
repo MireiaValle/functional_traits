@@ -1,0 +1,117 @@
+---
+title: "life_traits"
+author: "Mireia Valle"
+date: "8/9/2019"
+output: html_document
+---
+
+```{r setup}
+##Specific libraries for getting functional traits
+###FishLife
+#devtools::install_github("DanOvando/FishLife", ref= "query-fishlife")
+library(FishLife)
+
+##Libraries for data management
+library (tidyverse) 
+library (data.table)
+library (reshape)
+```
+
+#-------------------------------------------------------------------------------------------------------------------#
+#LOADING AQUAMAPS SPECIES DATA 2018 
+#-------------------------------------------------------------------------------------------------------------------#
+
+##Loading species list 
+```{r}
+#Reading data from MAZU
+dir_am <- '/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps'
+
+spp <- data.table::fread(file.path(dir_am, 'd2018/speciesoccursum_ver0816c.csv'))
+
+#From my laptop
+dir_am <- '/home/valle/github_annex/Aquamaps/'
+#spp <- data.table::fread(file.path(dir_am, 'd2018/speciesoccursum_ver0816c.csv'))
+
+#Tidy the species data table
+head (spp)
+
+spp <- spp %>%
+  setNames(tolower(names(.))) %>%
+  select(am_sid = speciesid, genus = genus, species = species, kingdom = kingdom, phylum = phylum, class = class, order = order, family = family)
+
+colnames (spp)
+
+summary (spp)
+str(spp)
+unique (spp$am_sid) %>% length()#24904
+```
+
+#-------------------------------------------------------------------------------------------------------------------#
+#GETTING FUNCTIONAL TRAITS FROM FishLife
+#-------------------------------------------------------------------------------------------------------------------#
+
+##Notes on FishLife
+###https://github.com/James-Thorson/FishLife
+###http://onlinelibrary.wiley.com/doi/10.1002/eap.1606/full 
+###* Loo = asymptotic maximum length (cm) 
+###* K = individual growth rate (yr^-1) brody growth coefficient
+###* Winfinity = asymptotic maximum mass (gr) 
+###* tmax = maximum age (yr) 
+###* tm = age at maturation (yr)
+###* M = natural mortality rate (yr^-1)
+###* Lm = length at maturation (cm) 
+###* T = average temperature within distribution (deg C) 
+
+##Function *Get_traits* that we are going to use was developed by Dan Ovando to query fishlife and store outputs in a sane structure, without this function the only way to extract life history parameters is by generating plots and then writing out their embedded predictions
+
+```{r}
+#?Get_traits
+```
+
+##For a dataframe with SEPARATE 'genus' and 'species' columns (e.g., 'Thunnus','thynnus'), run the following: 
+```{r}
+sfg = safely(Get_traits)
+
+species_lt2018<- spp %>% 
+  mutate(life_traits = map2(genus, species, ~(sfg(Genus=.x, Species=.y)))) %>%
+  mutate(fish_life_worked = map(life_traits, 'error') %>% map_lgl(is.null)) %>%
+  filter(fish_life_worked) %>%
+  mutate(life_traits = map(life_traits, 'result')) %>%
+  unnest() %>% 
+  mutate(sciname = paste(genus, species))
+```
+##See results
+```{r}
+as.tibble (species_lt2018) 
+head (species_lt2018)
+colnames (species_lt2018)
+str(species_lt2018)
+unique (species_lt2018$am_sid) %>% length()#12368
+unique (species_lt2018$fish_life_worked) 
+```
+##We subset the table with the columns we want to keep
+```{r}
+species_lt2018 <- subset(species_lt2018, select=c("am_sid", "genus", "species","sciname", "kingdom", "phylum", "class", "order", "family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "Temperature" ))
+head (species_lt2018)
+```
+
+##Analysing the data
+```{r}
+colnames (species_lt2018)
+lt_matrix <- subset(species_lt2018, select=c("Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "Temperature"))
+lt_matrix
+```
+##Analysing correlations: 
+```{r}
+cor (lt_matrix) 
+plot (lt_matrix$Loo~lt_matrix$Lm)
+```
+
+##Save the results
+```{r}
+write.csv (species_lt2018, file = "species_lt2018.csv")
+```
+##Remove spp dataframe
+```{r}
+#rm (spp)
+```
