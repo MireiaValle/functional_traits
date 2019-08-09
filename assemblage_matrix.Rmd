@@ -1,0 +1,63 @@
+---
+title: "assemblage_matrix"
+author: "Mireia Valle"
+date: "8/9/2019"
+output: html_document
+---
+
+```{r setup}
+##Libraries for data management
+library (tidyverse) 
+library (data.table)
+library (reshape)
+```
+
+### Load species list 
+```{r}
+species_lt2018 <- read.csv('species_lt2018.csv')
+unique (species_lt2018$am_sid) %>% length()#12368
+species_list <- species_lt2018 %>%
+    select(am_sid)
+unique (species_list$am_sid) %>% length()#12368
+```
+###Load species-cell data
+```{r}
+dir_am <- '/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps'
+
+spp_cells_final <- data.table::fread(file.path(dir_am, 'd2018/hcaf_species_native_ver0816c_fixed.csv'))
+  ### fread() way faster
+unique (spp_cells_final$am_sid) %>% length()#24904
+sum(is.na(spp_cells_final$loiczid))
+```
+###Join 
+
+Using am_sid common to both `spp_cells_final` and `species_lt2018`, join tables.  Use `data.table` keyed join!
+
+```{r attach new loiczids to species cells}
+spp_cells_final_keyed <- spp_cells_final %>%
+  data.table(key = "am_sid")
+sum(is.na(spp_cells_final_keyed$loiczid))
+species_list_keyed <- species_list %>%
+  data.table(key = "am_sid")
+sum(is.na(species_list_keyed))
+
+spp_cells_selected <- spp_cells_final_keyed[species_list_keyed]
+head (spp_cells_selected)
+unique (spp_cells_selected$am_sid) %>% length()#12368
+sum(is.na(spp_cells_selected$am_sid))
+sum(is.na(spp_cells_selected$loiczid))
+
+mv <- spp_cells_selected %>% 
+  filter (is.na(loiczid))%>%
+  group_by(am_sid)%>%
+  count ()
+
+mv2 <- subset (spp_cells_final_keyed, spp_cells_final_keyed$am_sid=="Fis-167765")
+mv3 <- subset (spp_cells_final_keyed, spp_cells_final_keyed$am_sid=="Fis-23834")
+mv4 <- subset (spp_cells_final_keyed, spp_cells_final_keyed$am_sid=="Fis-29344")
+```
+
+###use spread() to turn the am_sid into column names, with the prob as the value in the cell
+cell_spp_matrix<- spp_cells_selected %>%
+    spread(am_sid, prob)
+```
