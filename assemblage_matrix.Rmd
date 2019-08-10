@@ -29,35 +29,45 @@ spp_cells_final <- data.table::fread(file.path(dir_am, 'd2018/hcaf_species_nativ
 unique (spp_cells_final$am_sid) %>% length()#24904
 sum(is.na(spp_cells_final$loiczid))
 ```
-###Join 
+###Join tables using "am_sid" common to both `spp_cells_final` and `species_lt2018` to get a table where only the data on selected marine fish species is shown. Use `data.table` keyed join.
 
-Using am_sid common to both `spp_cells_final` and `species_lt2018`, join tables.  Use `data.table` keyed join!
-
-```{r attach new loiczids to species cells}
+```{r}
 spp_cells_final_keyed <- spp_cells_final %>%
   data.table(key = "am_sid")
-sum(is.na(spp_cells_final_keyed$loiczid))
+head (spp_cells_final_keyed)
+unique (spp_cells_final_keyed$am_sid) %>% length()#24904
+sum(is.na(spp_cells_final_keyed$loiczid))#0
+
 species_list_keyed <- species_list %>%
   data.table(key = "am_sid")
-sum(is.na(species_list_keyed))
+head (species_list_keyed)
+unique (species_list_keyed$am_sid) %>% length()#12368
 
-spp_cells_selected <- spp_cells_final_keyed[species_list_keyed]
+spp_cells_selected <- spp_cells_final_keyed[species_list_keyed, nomatch = 0]
+
 head (spp_cells_selected)
-unique (spp_cells_selected$am_sid) %>% length()#12368
+unique (spp_cells_selected$am_sid) %>% length()#12365
 sum(is.na(spp_cells_selected$am_sid))
 sum(is.na(spp_cells_selected$loiczid))
-
-mv <- spp_cells_selected %>% 
-  filter (is.na(loiczid))%>%
-  group_by(am_sid)%>%
-  count ()
-
-mv2 <- subset (spp_cells_final_keyed, spp_cells_final_keyed$am_sid=="Fis-167765")
-mv3 <- subset (spp_cells_final_keyed, spp_cells_final_keyed$am_sid=="Fis-23834")
-mv4 <- subset (spp_cells_final_keyed, spp_cells_final_keyed$am_sid=="Fis-29344")
 ```
 
 ###use spread() to turn the am_sid into column names, with the prob as the value in the cell
-cell_spp_matrix<- spp_cells_selected %>%
-    spread(am_sid, prob)
-```
+
+#seleccionamos las 10 primeras especies
+asdf <- head(unique(spp_cells_selected$am_sid), 10)
+asdf
+#selecciona datos en hs sobre las 10 primeras especies
+asdf_hs <- spp_cells_selected %>% filter(am_sid %in% asdf)
+head(asdf_hs)
+
+prueba <- asdf_hs %>%
+    spread(am_sid, prob, fill = 0)
+
+#spread 
+head (spp_cells_selected)
+spread <- spp_cells_selected %>%
+    spread(am_sid, prob, fill = 0)
+
+spp_cells_selected[14848064:14848071,]
+
+prueba2 <- filter (spp_cells_selected, spp_cells_selected$am_sid  )
