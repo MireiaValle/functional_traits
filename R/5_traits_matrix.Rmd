@@ -5,26 +5,83 @@ date: "8/19/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup}
+#installing and loading libraries
+library (tidyverse)
 ```
 
-## R Markdown
+#Creating the traits matrix joining the life traits data frame with the fishbase dataset
+```{r setup}
+setwd("~/github_annex")
+species_lt2018 <- read.csv('species_lt2018.csv')
+unique (species_lt2018$am_sid) %>% length () #12368
+sum(is.na(species_lt2018$am_sid))
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+fishbase_traits <- read.csv ("fishbase_traits.csv")
+as.tibble (fishbase_traits)
+unique (fishbase_traits$sciname) %>% length () #12209
+sum(is.na(fishbase_traits$sciname)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+traits_matrix <- left_join (fishbase_traits, species_lt2018, by= "sciname")
+as.tibble (traits_matrix)
+unique (traits_matrix$sciname) %>% length () #12209
+sum(is.na(traits_matrix$sciname))
 
-```{r cars}
-summary(cars)
+summary (traits_matrix)
+
+labels (traits_matrix)
+
+traits_matrix <- traits_matrix %>%
+  select(SpecCode = SpecCode, Species = Species, sciname = sciname, bodyshape = bodyshape, demerspelag = demerspelag, depthrangeshallow = depthrangeshallow, depthrangedeep = depthrangedeep, vulnerability = vulnerability, length= length, importance= importance, pricecateg= pricecateg, pd50= pd50, troph= troph, setrop= setrop, sizemin= sizemin, sizemax= sizemax, fishlength= fishlength, Epipelagic= Epipelagic, Mesopelagic= Mesopelagic, Bathypelagic= Bathypelagic, Abyssopelagic= Abyssopelagic, Hadopelagic= Hadopelagic, FeedingType= FeedingType, DietTroph= DietTroph, DietSeTroph= DietSeTroph, FoodTroph= FoodTroph,FoodSeTroph= FoodSeTroph,FoodRemark=FoodRemark, AddRems= AddRems,Benthic= Benthic, Sessile=Sessile,  Mobile=  Mobile, Demersal= Demersal, Endofauna= Endofauna, Pelagic= Pelagic,  fecuntype= fecuntype, fecun_min= fecun_min, fecun_max= fecun_max, OperculumPresent= OperculumPresent, BodyShapeI= BodyShapeI, SexualAttributes= SexualAttributes, SexMorphology= SexMorphology, TypeofEyes=TypeofEyes,PosofMouth= PosofMouth,TypeofMouth= TypeofMouth, CaudalFinI=CaudalFinI,  CShape=CShape, PelvicsAttributes= PelvicsAttributes,  IUCN_Code=IUCN_Code, Protected= Protected, EnvTemp=EnvTemp, Resilience= Resilience, ResilienceRemark= ResilienceRemark, AdultType= AdultType, AdultMode= AdultMode, am_sid = am_sid, genus = genus, species = species, kingdom = kingdom, phylum = phylum, class = class, order = order, family = family, Loo = Loo, K = K, Winfinity = Winfinity, tmax = tmax, tm = tm, M= M, Lm = Lm, temperature= Temperature)
+
+#find the species that we removed from the assemblage matrix
+fis1<- traits_matrix[traits_matrix$am_sid == "Fis-23415",]
+head (fis1)
+
+fis2<- traits_matrix[traits_matrix$am_sid == "Fis-25283",]
+head (fis2)
+
+traits_matrix_ok <- traits_matrix[-c(1937,3173), ]
+
+#we save the table
+write.csv (traits_matrix_ok, file = "traits_matrix.csv")
 ```
 
-## Including Plots
+traits_matrix <- read.csv ("traits_matrix.csv")
 
-You can also embed plots, for example:
+as.tibble (traits_matrix)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
+summary (traits_matrix)
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+SpecCode = SpecCode
+Species = Species
+sciname = sciname
+bodyshape = bodyshape
+demerspelag = demerspelag
+depthrangeshallow = depthrangeshallow
+depthrangedeep = depthrangedeep
+vulnerability = vulnerability
+length= length
+importance= importance
+pricecateg <fct>
+pd50 <dbl>
+troph <dbl>
+setrop <dbl>
+sizemin <dbl>
+sizemax <dbl>
+fishlength <lgl>
+Epipelagic <int>
+Mesopelagic <int>
+Bathypelagic <int>
+Abyssopelagic <int>
+Hadopelagic <int>
+FeedingType <fct>
+DietTroph <dbl>, DietSeTroph <dbl>, FoodTroph <dbl>,
+#   FoodSeTroph <dbl>, FoodRemark <fct>, AddRems <fct>, Benthic <int>, Sessile <int>, Mobile <int>, Demersal <int>,
+#   Endofauna <int>, Pelagic <int>, fecuntype <fct>, fecun_min <dbl>, fecun_max <dbl>, OperculumPresent <int>,
+#   BodyShapeI <fct>, SexualAttributes <fct>, SexMorphology <fct>, TypeofEyes <fct>, PosofMouth <fct>,
+#   TypeofMouth <fct>, CaudalFinI <fct>, CShape <fct>, PelvicsAttributes <fct>, IUCN_Code <fct>, Protected <int>,
+#   EnvTemp <fct>, Resilience <fct>, ResilienceRemark <fct>, AdultType <fct>, AdultMode <fct>, am_sid <fct>,
+#   genus <fct>, species <fct>, kingdom <fct>, phylum <fct>, class <fct>, order <fct>, family <fct>, Loo <dbl>, K <dbl>,
+#   Winfinity <dbl>, tmax <dbl>, tm <dbl>, M <dbl>, Lm <dbl>, temperature <dbl>
+

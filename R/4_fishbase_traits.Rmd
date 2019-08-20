@@ -425,17 +425,6 @@ fishbase_traits <- fishbase_traits %>%
 write.csv (fishbase_traits, file = "fishbase_traits.csv")
 ```
 
-#Creating the traits matrix joining the life traits data frame with the fishbase dataset
 
-setwd("~/github_annex")
-species_lt2018 <- read.csv('species_lt2018.csv')
-unique (species_lt2018$am_sid) %>% length ()
-sum(is.na(species_lt2018$am_sid))
 
-#we want to remove the NA values from that list
-spp_list <- na.omit(species_list) 
-#we save the table
-write.csv (spp_list, file = "spp_list.csv")
-
-fishbase_traits <- read.csv ("fishbase_traits.csv")
 
