@@ -1,0 +1,165 @@
+---
+title: "assemblage_matrix"
+author: "Mireia Valle"
+date: "8/9/2019"
+output: html_document
+---
+
+```{r setup}
+##Libraries for data management
+library (tidyverse) 
+library (data.table)
+library (reshape)
+```
+
+### Load species list 
+```{r}
+species_lt2018 <- read.csv('species_lt2018.csv')
+unique (species_lt2018$am_sid) %>% length()#12368
+species_list <- species_lt2018 %>%
+    select(am_sid)
+unique (species_list$am_sid) %>% length()#12368
+```
+###Load species-cell data
+```{r}
+dir_am <- '/home/shares/ohi/git-annex/globalprep/_raw_data/aquamaps'
+
+spp_cells_final <- data.table::fread(file.path(dir_am, 'd2018/hcaf_species_native_ver0816c_fixed.csv'))
+  ### fread() way faster
+unique (spp_cells_final$am_sid) %>% length()#24904
+sum(is.na(spp_cells_final$loiczid))#0
+```
+###Join tables using "am_sid" common to both `spp_cells_final` and `species_lt2018` to get a table where only the data on selected marine fish species is shown. Use `data.table` keyed join.
+
+```{r}
+spp_cells_final_keyed <- spp_cells_final %>%
+  data.table(key = "am_sid")
+head (spp_cells_final_keyed)
+unique (spp_cells_final_keyed$am_sid) %>% length()#24904
+sum(is.na(spp_cells_final_keyed$loiczid))#0
+
+species_list_keyed <- species_list %>%
+  data.table(key = "am_sid")
+head (species_list_keyed)
+unique (species_list_keyed$am_sid) %>% length()#12368
+
+spp_cells_selected <- spp_cells_final_keyed[species_list_keyed, nomatch = 0]
+
+head (spp_cells_selected)
+unique (spp_cells_selected$am_sid) %>% length()#12365
+sum(is.na(spp_cells_selected$am_sid))
+sum(is.na(spp_cells_selected$loiczid))
+```
+
+###we want to use spread() to turn the am_sid into column names, with the prob as the value in the cell
+
+#Let's do it for the first 10 species
+#select the first 10 species
+first_10spp <- head(unique(spp_cells_selected$am_sid), 10)
+first_10spp
+#select loiczid and probability from spp_cells_selected dataframe
+first_10spp_hs <- spp_cells_selected %>% filter(am_sid %in% first_10spp)
+head(first_10spp_hs)
+#spread the data from those first 10 species
+spread_10spp <- first_10spp_hs %>%
+    spread(am_sid, prob, fill = 0)
+#it works!
+
+#spread the complete dataset 
+head (spp_cells_selected)
+spread <- spp_cells_selected %>%
+    spread(am_sid, prob, fill = 0)
+    
+#it doesn't work because it has duplicated key values (more than one value of probability for one species and one cell)
+
+#use group_by () to deal with duplicated probability values per species and per cells. Using this function we group the duplicated values by mean
+spp_grouped <- spp_cells_selected %>%
+  group_by(am_sid, loiczid)  %>%
+  summarize(prob = mean(prob))
+unique (spp_grouped$am_sid) %>% length()#12365
+
+#Now we can spread data using grouped mean values of probability for 524 cells (*2= 1048)
+spread_grouped <- spp_grouped %>%
+    spread(am_sid, prob, fill = 0)
+head (spread_grouped)
+
+# We can see which are those duplicated rows
+
+duplicate <- spp_cells_selected %>%
+#create a column call count where we write 1
+mutate (count=1) %>%
+#group by unique combinations of am_sid and loiczid
+group_by (am_sid, loiczid) %>%
+#summarize the data counting the values on count
+summarize(sum = sum(count))%>%
+#filter data selecting only that rows that have a value > 1 for that sum
+filter(sum > 1)
+
+head (duplicate)#this table contains the id of the 524 cells that had duplicated values
+
+#we want to see how many species are involved on that duplication 
+unique (duplicate$am_sid) %>% length() 
+# only 2
+unique (duplicate$am_sid) 
+# which? "Fis-23415" "Fis-25283"
+
+#we analyse the duplicated data for species 1
+duplicate1<- duplicate[duplicate$am_sid == "Fis-23415",]
+duplicate1
+head (duplicate1)
+#we map it
+dup1_map <- subs (basemap, duplicate1, by="loiczid", which= "sum")
+plot (dup1_map)
+#we look for its name
+duplicate1name<- species_lt2018[species_lt2018$am_sid == "Fis-23415",]
+#438 duplicated probability values, species name= Carangoides equula (Temminck & Schlegel, 1844)
+
+#we repeat the same steps for the second species
+duplicate2<- duplicate[duplicate$am_sid == "Fis-25283",]
+duplicate2
+head (duplicate2)
+#we look for its name
+duplicate2name<- species_lt2018[species_lt2018$am_sid == "Fis-25283",]
+#we map it
+dup2_map <- subs (basemap, duplicate2, by="loiczid", which= "sum")
+plot (dup2_map)
+
+#we create a column that is call "duplicate" and is filled by "TRUE" for all rows. 
+duplicate_true <- duplicate %>%
+mutate (duplicate=TRUE)
+
+#we select the columns we want to keep, we drop "count" column
+duplicate_true <- subset(duplicate_true, select=c("am_sid", "loiczid","duplicate"))
+
+#we do a left_joint to our species data set
+join <- left_join (spp_cells_selected, duplicate_true)
+
+#we check if everything went well
+head (join)
+#the column we have created has two unique values NA and TRUE
+unique (join$duplicate) %>% length()#2
+unique (join$duplicate) # NA TRUE
+#We filter the joint table selecting those rows with NA values
+spp_hs_final <- filter (join, is.na(duplicate))
+#we check if everything went well
+head (spp_hs_final)
+unique (spp_hs_final$duplicate) %>% length()#1
+unique (spp_hs_final$duplicate) # NA
+unique (spp_hs_final$am_sid) %>% length()#
+
+spp_hs_final <- subset(spp_hs_final, select=c("am_sid", "loiczid","prob"))
+head (spp_hs_final)
+as.tibble (spp_hs_final)
+
+spread_loiczid_spp <- spp_hs_final %>%
+    spread(am_sid, prob, fill = 0)
+
+as.tibble (spread_loiczid_spp)
+
+drops <- c("Fis-23415","Fis-25283")
+spread_loiczid_spp <-spread_loiczid_spp[ , !(names(spread_loiczid_spp) %in% drops)]
+as.tibble (spread_loiczid_spp)
+
+#save the assemblage_matrix
+write.csv (spread_loiczid_spp, file = "spread_loiczid_spp.csv")
+

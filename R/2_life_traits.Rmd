@@ -99,7 +99,7 @@ head (species_lt2018)
 ```{r}
 colnames (species_lt2018)
 lt_matrix <- subset(species_lt2018, select=c("Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "Temperature"))
-lt_matrix
+head (lt_matrix)
 ```
 ##Analysing correlations: 
 ```{r}

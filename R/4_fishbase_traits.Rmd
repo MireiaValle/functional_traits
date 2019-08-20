@@ -1,0 +1,441 @@
+---
+title: "4_fishbase_traits"
+author: "Mireia Valle"
+date: "8/15/2019"
+output: html_document
+---
+
+```{r setup}
+#installing and loading libraries
+
+install.packages("rfishbase", 
+                 repos = c("http://packages.ropensci.org", "http://cran.rstudio.com"), 
+                 type="source")
+library (rfishbase)
+?rfishbase
+library (tidyverse)
+```
+
+#read species life traits table (species_lt2018), the table we got from FishLife
+```{r}
+species_lt2018 <- read.csv('species_lt2018.csv')
+as.tibble (species_lt2018)
+
+species_list <- species_lt2018 %>%
+select(Species=sciname)
+as.tibble (species_list)
+unique (species_list$Species) %>% length ()#12368
+sum(is.na(species_list$Species))#0
+
+#merge Species and Genus to create a new column call sciname
+#species_list <- species_lt2018
+#head (species_list)
+#species_list<-unite(species_list, sciname,c(4:5), sep = " ", remove = TRUE)
+#as.tibble (species_list)
+#rm (species_list)
+```
+
+#START GETTING TRAIT INFORMATION FROM FISH BASE
+```{r}
+#-------------------------------------------------#
+#species() function returns a table containing much (but not all) of the information found on the summary or homepage for a species on fishbase.org. rfishbase functions always return tidy data tables: rows are observations (e.g. a species, individual samples from a species) and columns are variables (fields).
+
+#species###########################################################################################
+#species_table<- rfishbase::docs('species')
+#species_table
+#write.csv(species_table, file = "species_table.csv")
+
+#getting species data
+#options(FISHBASE_API = "https://fishbase.ropensci.org/sealifebase")
+options(FISHBASE_API = "https://fishbase.ropensci.org")
+
+fishbase_species<- species (species_list$Species)
+head (fishbase_species)
+summary (fishbase_species)
+#12368 obs of 100 variables
+unique (fishbase_species$Species) %>% length ()
+sum(is.na(fishbase_species$SpecCode))
+
+
+#we want to add the SpecCode to our species list
+species_list <- fishbase_species %>%
+select(SpecCode= SpecCode, Species=Species)
+as.tibble (species_list)
+unique (species_list$Species) %>% length ()
+sum(is.na(species_list$SpecCode))
+
+#we want to remove the NA values from that list
+spp_list <- na.omit(species_list) 
+#we save the table
+write.csv (spp_list, file = "spp_list.csv")
+
+fishbase_species<- species (spp_list$Species)
+head (fishbase_species)
+summary (fishbase_species)
+#12368 obs of 100 variables
+
+#we select 9 of the 100 variables:
+
+##1.- Body Shape
+unique (fishbase_species$BodyShapeI) %>% length()
+#7
+unique (fishbase_species$BodyShapeI) 
+#elongated, fusiform / normal, eel-like, short and / or deep, other, NA, other (see remarks)
+sum(is.na(fishbase_species$BodyShapeI))
+#1338
+
+##2.- DemersPelag
+unique (fishbase_species$DemersPelag) %>% length()
+#9
+unique (fishbase_species$DemersPelag) 
+#1] "pelagic-oceanic" "pelagic-neritic" "demersal" "bathypelagic""bathydemersal""benthopelagic""NA""reef-associated" "pelagic"    
+sum(is.na(fishbase_species$DemersPelag))
+#159
+
+#3.- DepthRangeShallow NAs: 2104
+#4.- DepthRangeDeep NAs:1638
+#5.- Vulnerability
+sum(is.na(fishbase_species$Vulnerability))#159
+#6.- Length NAs: 858 
+#7.- Importance NAs: 8118
+#8.- PriceCateg
+#9.- PD 50 Phylogenetic diversity index (Ref. 82805):  [Uniqueness, from 0.5 = low to 2.0 = high] NAs: 6
+
+labels (fishbase_species)
+#We select those fields that we want to keep
+fishbase_species_select <- fishbase_species [c("SpecCode","Species", "BodyShapeI", "DemersPelag", "DepthRangeShallow", "DepthRangeDeep", "Vulnerability", "Length", "Importance", "PriceCateg", "PD50")]
+as.tibble (fishbase_species_select)
+rm (fishbase_species)
+
+#we rename the fields avoiding Up and lowe case in the labels
+fishbase_species_select <- fishbase_species_select %>%
+select(SpecCode=SpecCode, sciname = Species, bodyshape = BodyShapeI, demerspelag = DemersPelag, depthrangeshallow = DepthRangeShallow, depthrangedeep =DepthRangeDeep, vulnerability=Vulnerability, length =Length, importance = Importance, pricecateg = PriceCateg, pd50=PD50)
+
+#we save the table
+write.csv (fishbase_species_select, file = "fishbase_species_select.csv")
+
+#-------------------------------------------------#
+#Looking for more available data in FISH BASE
+
+#to see documentation of tables and fields
+tables <- docs()
+tables
+write.csv(tables, file = "tables.csv")
+
+#diet###########################################################################################
+#diet_table<- rfishbase::docs('diet')
+#diet_table
+#write.csv(diet_table, file = "diet_table.csv")
+#getting diet data
+fishbase_diet<- diet(spp_list$Species, fields=c("SpecCode", "Species", "Troph", "seTroph", "SizeMin", "SizeMax", "SizeType", "FishLength"))
+head (fishbase_diet)
+summary (fishbase_diet)
+summary (fishbase_diet$Troph)
+unique (fishbase_diet$SizeType)
+as.tibble (fishbase_diet)
+
+#THIS DATA NEED TO BE ARRANGED BEFORE BEING ADDED TO THE GLOBAL TABLE. p.e.calculate mean value by sciname
+
+fishbase_diet_spp <- fishbase_diet %>%
+  group_by(SpecCode)  %>%
+  summarize(troph = mean(Troph), setrop= mean (seTroph), sizemin = mean (SizeMin), sizemax = mean (SizeMax), fishlength = mean ("FishLength", na.rm=TRUE) )
+
+rm(fishbase_diet)
+head (fishbase_diet_spp)
+sum(is.na(fishbase_diet_spp$troph))
+#10440
+unique (fishbase_diet_spp$SpecCode) %>% length ()
+#12210
+sum(is.na(fishbase_diet_spp$SpecCode))#1
+sum(is.na(fishbase_diet_spp$troph)) #10440
+sum(is.na(fishbase_diet_spp$setrop))#10440
+
+#we save the table
+write.csv (fishbase_diet_spp, file = "fishbase_diet_spp.csv")
+
+#ecology###########################################################################################
+#ecology_table<- rfishbase::docs('ecology')
+#ecology_table
+#write.csv(ecology_table, file = "ecology_table.csv")
+#getting ecology data
+list_fields("Troph")
+#we select the fields we want to keep
+fishbase_ecol<- ecology (spp_list$Species, fields=c("SpecCode", "Epipelagic", "Mesopelagic", "Bathypelagic", "Abyssopelagic", "Hadopelagic", "FeedingType", "DietTroph", "DietSeTroph", "FoodTroph", "FoodSeTroph","FoodRemark", "AddRems", "Benthic", "Sessile", "Mobile", "Demersal", "Endofauna", "Pelagic"))
+head (fishbase_ecol)
+summary (fishbase_ecol)
+#12378 obs of 19 variables
+#"DietTroph" NAs: 10905
+#"DietSeTroph" NAs 11153
+#"FoodTroph" NAs 7504
+#"FoodSeTroph" NAs 7504
+#"FoodRemark"
+#"AddRems"
+
+unique (fishbase_ecol$SpecCode) %>% length ()
+#12210
+sum(is.na(fishbase_ecol$SpecCode))
+#159
+sum(is.na(fishbase_ecol$DietTroph)) #10905
+sum(is.na(fishbase_ecol$DietSeTroph))#11153
+sum(is.na(fishbase_ecol$FoodTroph)) #7504
+sum(is.na(fishbase_ecol$FoodSeTroph))#7504
+sum(is.na(fishbase_ecol$FeedingType))#7640
+
+fishbase_ecol_spp <- fishbase_ecol %>%
+  group_by(SpecCode)  %>%
+  summarize(Epipelagic = first (Epipelagic), Mesopelagic= first (Mesopelagic), Bathypelagic= first (Bathypelagic), Abyssopelagic= first (Abyssopelagic), Hadopelagic = first(Hadopelagic), FeedingType = first (FeedingType), DietTroph = first (DietTroph), DietSeTroph =first (DietSeTroph), FoodTroph = first (FoodTroph), FoodSeTroph = first (FoodSeTroph), FoodRemark = first (FoodRemark), AddRems = first (AddRems), Benthic = first (Benthic), Sessile = first (Sessile), Mobile = first (Mobile),  Demersal = first (Demersal), Endofauna = first (Endofauna), Pelagic = first (Pelagic))
+    
+
+#ecol_na <-fishbase_ecol[fishbase_ecol$SpecCode == "NA",]
+#head (ecol_na)
+
+#we save the table
+write.csv (fishbase_ecol_spp, file = "fishbase_ecol.csv")
+
+#fecundity###########################################################################################
+#fecun_table<- rfishbase::docs('fecundity')
+#fecun_table
+#write.csv(fecun_table, file = "fecun_table.csv")
+#getting fecundity data
+#fecundity ("Eleginus nawaga")
+fishbase_fecun <- fecundity (spp_list$Species, fields=c("SpecCode", "FecundityType", "SourceRef", "FecundityMin", "FecundityMax"))
+head (fishbase_fecun)
+summary (fishbase_fecun)
+unique (fishbase_fecun$SpecCode) %>% length ()#12210
+
+fishbase_fecun_spp <- fishbase_fecun %>%
+  group_by(SpecCode)  %>%
+  summarize(fecuntype= first (FecundityType), fecun_min = mean(FecundityMin), fecun_max= mean (FecundityMax) )
+
+head (fishbase_fecun_spp)
+unique (fishbase_fecun_spp$SpecCode) %>% length ()
+#12210
+sum(is.na(fishbase_fecun_spp$SpecCode))
+#1
+sum(is.na(fishbase_fecun_spp$fecuntype)) #12161
+sum(is.na(fishbase_fecun_spp$fecun_min)) #11603
+sum(is.na(fishbase_fecun_spp$fecun_max)) #11535
+
+rm (fishbase_fecun)
+#we save the table
+write.csv (fishbase_fecun_spp, file = "fishbase_fecun_spp.csv")
+
+#length###########################################################################################
+#e<- length_length ("Pomadasys stridens")
+#head (e)
+#getting length data
+#fishbase_length <- length_length (species_list$sciname, fields=c("SpecCode","LengthMin", "LengthMax"))
+#head (fishbase_length)
+#summary(fishbase_length)
+#calculate mean value by sciname
+#16974 obs of 2 variables 
+#LengthMin 
+#LengthMax
+
+#maturity###########################################################################################
+#matu_table<- rfishbase::docs('maturity')
+#matu_table
+#write.csv(matu_table, file = "matu_table.csv")
+#getting maturity data
+#fishbase_matu <- maturity (species_list$sciname, fields=c("SpecCode", "tm", "Lm"))
+#Error in curl::curl_fetch_memory(url, handle = handle) : 
+#Timeout was reached: Connection timed out after 10000 milliseconds
+#head (fishbase_matu)
+#summary (fishbase_matu)
+
+#morphology###########################################################################################
+#morpho_table<- rfishbase::docs('morphology')
+#morpho_table
+#write.csv(morpho_table, file = "morpho_table.csv")
+#getting morphology data
+fishbase_morpho <- morphology (spp_list$Species)
+head (fishbase_morpho)
+summary (fishbase_morpho)
+
+unique (fishbase_morpho$SpecCode) %>% length ()
+#12210
+sum(is.na(fishbase_morpho$SpecCode))
+#159
+
+labels(fishbase_morpho)
+
+fishbase_morpho_select  <- fishbase_morpho [c("SpecCode","OperculumPresent", "BodyShapeI", "SexualAttributes", "SexMorphology", "TypeofEyes", "TypeofMouth", "PosofMouth", "CaudalFinI", "CShape", "PelvicsAttributes")]
+
+sum(is.na(fishbase_morpho_select$OperculumPresent))
+#3037
+sum(is.na(fishbase_morpho_select$BodyShapeI))
+#3796
+sum(is.na(fishbase_morpho_select$SexualAttributes))
+#11501
+sum(is.na(fishbase_morpho_select$SexMorphology))
+#11524
+sum(is.na(fishbase_morpho_select$TypeofEyes))
+#9952
+sum(is.na(fishbase_morpho_select$TypeofMouth))
+#9822
+sum(is.na(fishbase_morpho_select$PosofMouth))
+#9708
+sum(is.na(fishbase_morpho_select$CaudalFinI))
+#10540
+sum(is.na(fishbase_morpho_select$CShape))
+#8027
+sum(is.na(fishbase_morpho_select$PelvicsAttributes))
+#8529
+
+fishbase_morpho_select_spp <- fishbase_morpho_select %>%
+  group_by(SpecCode)  %>%
+  summarize(OperculumPresent = first (OperculumPresent), BodyShapeI= first (BodyShapeI), SexualAttributes= first (SexualAttributes), SexMorphology= first (SexMorphology), TypeofEyes = first(TypeofEyes), TypeofMouth = first (TypeofMouth), PosofMouth = first (PosofMouth), CaudalFinI =first (CaudalFinI), CShape = first (CShape), PelvicsAttributes = first (PelvicsAttributes))
+
+rm (fishbase_morpho)
+#we save the table
+write.csv (fishbase_morpho_select_spp, file = "fishbase_morpho_select.csv")
+
+#popchar####################################################################
+#popchar_table<- rfishbase::docs('popchar')
+#popchar_table
+#write.csv(popchar_table, file = "popchar_table.csv")
+#getting popchar data
+#fishbase_pop <- popchar (species_list$sciname, fields= c("SpecCode", "Wmax", "Lmax", "tmax", "SameWL", "SameLt"))
+#head (fishbase_pop)
+#summary (fishbase_pop) 
+
+#popgrowth####################################################################
+#popgrowth_table<- rfishbase::docs('popgrowth')
+#popgrowth_table
+#write.csv(popgrowth_table, file = "popgrowth_table.csv")
+#getting popgrowth data
+#fishbase_popgrowth <- popgrowth (species_list$sciname)
+#head (fishbase_popgrowth)
+#summary (fishbase_popgrowth) 
+
+#poplf####################################################################
+#poplf_table<- rfishbase::docs('poplf')
+#poplf_table
+#write.csv(poplf_table, file = "poplf_table.csv")
+#getting poplf data
+#fishbase_poplf <- poplf (species_list$sciname)
+#head (fishbase_poplf)
+#summary (fishbase_poplf) 
+
+#popll####################################################################
+#popll_table<- rfishbase::docs('popll')
+#popll_table
+#write.csv(popll_table, file = "popll_table.csv")
+#getting poplf data
+#fishbase_popll <- popll (species_list$sciname, fields= c("SpecCode", "Length1", "Length2", "a", "b", "LengthMin", "LengthMax"))
+#head (fishbase_popll)
+#summary (fishbase_popll) 
+
+#poplw####################################################################
+#poplw_table<- rfishbase::docs('poplw')
+#poplw_table
+#write.csv(poplw_table, file = "poplw_table.csv")
+
+#popqb####################################################################
+#popqb_table<- rfishbase::docs('popqb')
+#popqb_table
+#write.csv(popqb_table, file = "popqb_table.csv")
+#getting popqb data
+#fishbase_popqb<- popqb (species_lt2018$sciname, fields= c("SpecCode", "PopQB", "MaintQB", "Winf", "FoodType", "K", "Salinity", "t0", "Temperature", "Mortality"))
+#head (fishbase_popqb)
+#summary (fishbase_popqb) 
+
+#Stocks###########################################################################################
+#stocks_table<- rfishbase::docs('stocks')
+#stocks_table
+#write.csv(stocks_table, file = "stocks_table.csv")
+#getting stocks data
+fishbase_stocks <- stocks(spp_list$Species, fields= c("SpecCode", "IUCN_Code", "Protected", "TempMin", "TempMax", "TempRef", "EnvTemp", "Resilience", "ResilienceRemark"))
+head (fishbase_stocks)
+summary (fishbase_stocks)
+
+#THIS DATA NEED TO BE ARRANGED BEFORE BEING ADDED TO THE GLOBAL TABLE. p.e.calculate mean value by sciname
+fishbase_stocks_spp <- fishbase_stocks %>%
+  group_by(SpecCode) %>%
+  summarize(IUCN_Code = first(IUCN_Code), Protected = first(Protected), EnvTemp= first(EnvTemp), Resilience= first(Resilience), ResilienceRemark= first(ResilienceRemark))
+  
+head (fishbase_stocks_spp)
+sum(is.na(fishbase_stocks_spp$IUCN_Code)) #1
+sum(is.na(fishbase_stocks_spp$Resilience)) #835
+sum(is.na(fishbase_stocks_spp$EnvTemp)) #1
+
+unique (fishbase_stocks_spp$SpecCode) %>% length ()
+#12210
+sum(is.na(fishbase_diet_spp$SpecCode))
+#1
+unique (fishbase_stocks_spp$EnvTemp) 
+
+rm (fishbase_stocks)
+#we save the table
+write.csv (fishbase_stocks_spp, file = "fishbase_stocks_spp.csv")
+
+#Swimming###########################################################################################
+#swim_table<- rfishbase::docs('swimming')
+#swim_table
+#write.csv(swim_table, file = "swim_table.csv")
+#getting swimming data
+fishbase_swim <- swimming (spp_list$Species, fields=c("SpecCode", "AdultType", "AdultMode"))
+head (fishbase_swim)
+summary (fishbase_swim)
+sum(is.na(fishbase_swim$AdultType))
+unique (fishbase_swim$SpecCode) %>%length ()#12210
+sum(is.na(fishbase_swim$SpecCode))#159
+sum(is.na(fishbase_swim$AdultType))#10422
+sum(is.na(fishbase_swim$AdultMode)) #10424
+
+#we save the table
+write.csv (fishbase_swim, file = "fishbase_swim.csv")
+
+```
+
+#Joining all tables we got from FISHBASE
+```{r}
+spp_list <- read.csv ("spp_list.csv")
+fishbase_species_select <- read.csv ('fishbase_species_select.csv')
+fishbase_diet_spp <- read.csv ('fishbase_diet_spp.csv')
+fishbase_ecol <- read.csv('fishbase_ecol.csv')
+fishbase_fecun_spp <- read.csv('fishbase_fecun_spp.csv')
+fishbase_morpho_select <- read.csv('fishbase_morpho_select.csv')
+fishbase_stocks_spp <- read.csv('fishbase_stocks_spp.csv')
+fishbase_swim <- read.csv('fishbase_swim.csv')
+
+#view tables
+as.tibble (spp_list)
+as.tibble(fishbase_species_select)
+as.tibble(fishbase_diet_spp)
+as.tibble(fishbase_ecol)
+as.tibble(fishbase_fecun_spp)
+as.tibble(fishbase_morpho_select)
+as.tibble(fishbase_stocks_spp)
+as.tibble(fishbase_swim)
+
+fishbase_traits <- spp_list %>%
+  left_join (.,fishbase_species_select, by= "SpecCode") %>%
+  left_join (.,fishbase_diet_spp, by= "SpecCode") %>%
+  left_join (.,fishbase_ecol, by= "SpecCode") %>%
+  left_join (.,fishbase_fecun_spp, by= "SpecCode") %>%  
+  left_join (.,fishbase_morpho_select, by= "SpecCode") %>%    
+  left_join (.,fishbase_stocks_spp, by= "SpecCode") %>% 
+  left_join (.,fishbase_swim, by= "SpecCode")
+  
+fishbase_traits <- fishbase_traits %>%
+  select(SpecCode = SpecCode, Species = Species, sciname = sciname, bodyshape = bodyshape, demerspelag = demerspelag, depthrangeshallow = depthrangeshallow, depthrangedeep = depthrangedeep, vulnerability = vulnerability, length= length, importance= importance, pricecateg= pricecateg, pd50= pd50, troph= troph, setrop= setrop, sizemin= sizemin, sizemax= sizemax, fishlength= fishlength, Epipelagic= Epipelagic, Mesopelagic= Mesopelagic, Bathypelagic= Bathypelagic, Abyssopelagic= Abyssopelagic, Hadopelagic= Hadopelagic, FeedingType= FeedingType, DietTroph= DietTroph, DietSeTroph= DietSeTroph, FoodTroph= FoodTroph,FoodSeTroph= FoodSeTroph,FoodRemark=FoodRemark, AddRems= AddRems,Benthic= Benthic, Sessile=Sessile,  Mobile=  Mobile, Demersal= Demersal, Endofauna= Endofauna, Pelagic= Pelagic,  fecuntype= fecuntype, fecun_min= fecun_min, fecun_max= fecun_max, OperculumPresent= OperculumPresent, BodyShapeI= BodyShapeI, SexualAttributes= SexualAttributes, SexMorphology= SexMorphology, TypeofEyes=TypeofEyes,PosofMouth= PosofMouth,TypeofMouth= TypeofMouth, CaudalFinI=CaudalFinI,  CShape=CShape, PelvicsAttributes= PelvicsAttributes,  IUCN_Code=IUCN_Code, Protected= Protected, EnvTemp=EnvTemp, Resilience= Resilience, ResilienceRemark= ResilienceRemark, AdultType= AdultType, AdultMode= AdultMode)
+
+#we save the table
+write.csv (fishbase_traits, file = "fishbase_traits.csv")
+```
+
+#Creating the traits matrix joining the life traits data frame with the fishbase dataset
+
+setwd("~/github_annex")
+species_lt2018 <- read.csv('species_lt2018.csv')
+unique (species_lt2018$am_sid) %>% length ()
+sum(is.na(species_lt2018$am_sid))
+
+#we want to remove the NA values from that list
+spp_list <- na.omit(species_list) 
+#we save the table
+write.csv (spp_list, file = "spp_list.csv")
+
+fishbase_traits <- read.csv ("fishbase_traits.csv")
+
