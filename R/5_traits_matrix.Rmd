@@ -76,12 +76,59 @@ Bathypelagic <int>
 Abyssopelagic <int>
 Hadopelagic <int>
 FeedingType <fct>
-DietTroph <dbl>, DietSeTroph <dbl>, FoodTroph <dbl>,
-#   FoodSeTroph <dbl>, FoodRemark <fct>, AddRems <fct>, Benthic <int>, Sessile <int>, Mobile <int>, Demersal <int>,
-#   Endofauna <int>, Pelagic <int>, fecuntype <fct>, fecun_min <dbl>, fecun_max <dbl>, OperculumPresent <int>,
-#   BodyShapeI <fct>, SexualAttributes <fct>, SexMorphology <fct>, TypeofEyes <fct>, PosofMouth <fct>,
-#   TypeofMouth <fct>, CaudalFinI <fct>, CShape <fct>, PelvicsAttributes <fct>, IUCN_Code <fct>, Protected <int>,
-#   EnvTemp <fct>, Resilience <fct>, ResilienceRemark <fct>, AdultType <fct>, AdultMode <fct>, am_sid <fct>,
-#   genus <fct>, species <fct>, kingdom <fct>, phylum <fct>, class <fct>, order <fct>, family <fct>, Loo <dbl>, K <dbl>,
-#   Winfinity <dbl>, tmax <dbl>, tm <dbl>, M <dbl>, Lm <dbl>, temperature <dbl>
+DietTroph <dbl>
+DietSeTroph <dbl>
+FoodTroph <dbl>
+FoodSeTroph <dbl>
+FoodRemark <fct>
+AddRems <fct>
+Benthic <int>
+Sessile <int>
+Mobile <int>
+Demersal <int>
+Endofauna <int>
+Pelagic <int>
+fecuntype <fct>
+fecun_min <dbl>
+fecun_max <dbl>
+OperculumPresent <int>
+BodyShapeI <fct>
+SexualAttributes <fct>
+SexMorphology <fct>
+TypeofEyes <fct>
+PosofMouth <fct>,
+TypeofMouth <fct>
+CaudalFinI <fct>
+CShape <fct>
+PelvicsAttributes <fct>
+IUCN_Code <fct>
+Protected <int>
+EnvTemp <fct>
+Resilience <fct>
+ResilienceRemark <fct>
+AdultType <fct>
+AdultMode <fct>
+am_sid <fct>
+genus <fct>
+species <fct>
+kingdom <fct>
+phylum <fct>
+class <fct>
+order <fct>
+family <fct>
+Loo <dbl>
+K <dbl>
+Winfinity <dbl>
+tmax <dbl>
+tm <dbl>
+M <dbl>
+Lm <dbl>
+temperature <dbl>
 
+
+#selected traits
+
+traits_selected <- subset(traits_matrix, select=c("SpecCode", "sciname", "am_sid", "genus", "species", "kingdom", "phylum", "class", "order", "family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "temperature",  "bodyshape", "demerspelag", "depthrangedeep", "vulnerability", "importance", "pricecateg", "pd50", "troph", "setrop", "FeedingType", "DietTroph", "DietSeTroph", "FoodTroph", "FoodSeTroph", "fecuntype", "fecun_min", "fecun_max", "OperculumPresent", "BodyShapeI", "SexualAttributes", "SexMorphology", "TypeofEyes", "PosofMouth", "TypeofMouth", "CaudalFinI", "CShape", "PelvicsAttributes", "IUCN_Code", "Protected", "EnvTemp", "Resilience", "AdultType", "AdultMode"))
+
+#we save the table
+write.csv (traits_selected, file = "traits_selected.csv")

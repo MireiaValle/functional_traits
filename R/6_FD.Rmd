@@ -1,0 +1,508 @@
+---
+title: "FD"
+author: "Mireia Valle"
+date: "9/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#1.- THE SPECIES POOL ON THE ASSEMBLAGE MATRIX AND THE TRAITS SHOULD BE THE SAME, THEN WE NEED TO PREPARE OUR TABLES:
+
+#read the assemblage_matrix
+assemblage <- read.csv('spread_loiczid_spp.csv') #168700 obs of 12365
+as.tibble (assemblage)
+
+#rename the colnames
+names(assemblage) <- gsub(x = names(assemblage),
+                        pattern = "\\.",
+                        replacement = "-")
+as.tibble (assemblage)
+
+#create a dataframe with the code of the fish species contained in the assemblage matrix
+spp <- colnames (assemblage)
+as.tibble (spp)
+
+#remove the first two rows "X" and "loiczid"
+spp <- spp[-1]
+as.tibble (spp)
+spp <- spp[-1]
+as.tibble (spp)
+
+#read as dataframe
+spp<- read.table(text=spp,col.names=c('am_sid'))
+head (spp)
+as.tibble (spp)
+unique (spp$am_sid) %>% length () #12363
+
+#read de traits matrix
+traits<- read.csv ("traits_selected.csv")
+as.tibble (traits)
+unique (traits$am_sid) %>% length () #12207
+sum(is.na(traits$sciname))
+sum(is.na(traits$am_sid))
+
+#left join the list of species that we have within the assemblage matrix to the traits matrix
+traits_spp <- left_join (spp, traits, by= "am_sid")
+as.tibble (traits_spp)
+unique (traits_spp$am_sid) %>% length () #12363
+unique (traits_spp$sciname) %>% length () #12205
+sum(is.na(traits_spp$sciname))#159
+
+#create a new traits matrix with the species that are in both the assemblage and the traits matrix
+traits_spp_ok <- traits_spp[!is.na(traits_spp$sciname), ]
+unique (traits_spp_ok$am_sid) %>% length () #12204
+as.tibble (traits_spp_ok)
+#we save the TRAITS MATRIX 
+write.csv (traits_spp_ok , file = "traits_spp_ok.csv")
+
+#we create a table which contains the am_sid code and the scientific name of the species we are going to evaluate
+spp_list <- subset(traits_spp_ok, select=c("am_sid","sciname"))
+head (spp_list)
+sum(is.na(spp_list$sciname))
+unique (spp_list$am_sid) %>% length () #12204
+write.csv (spp_list, file = "spp_list.csv")
+
+#we create a table which contains the am_sid of those species from the assemblage matrix that had NA value on the traits matrix
+traits_spp_NA <- filter (traits_spp, is.na(traits_spp$sciname))
+
+#we create a table selecting the am_sid code
+spp_list_NA <- subset(traits_spp_NA, select=c("am_sid"))
+head (spp_list_NA)
+
+#using the table with the am_sid code of those species that were filled by NAs on the traits matrix, we create a list "drops" that contains the am_sid codes of the species we want to remove from the assemblage matrix
+drops <- c(spp_list_NA$am_sid)
+assemblage_ok <-assemblage[ , !(names(assemblage) %in% drops)]
+as.tibble (assemblage_ok)
+str (assemblage_ok)
+
+#we save the ASSEMBLAGE MATRIX
+write.csv (assemblage_ok, file = "assemblages_matrix_ok.csv")
+
+
+#2.- FUNCTIONAL DIVERSITY 
+
+traits<- read.csv ("traits_spp_ok .csv") 
+assemblage <- read.csv('assemblages_matrix_ok.csv') 
+
+write.csv(summary(traits),"summary_traits.csv")
+
+traits$class
+#Actinopterygii Cephalaspidomorphi Elasmobranchii Holocephali Myxini Sarcopterygii
+
+levels (traits$order)
+#53
+write.csv(summary (traits$order), "summary_traits_order.csv")
+
+levels (traits$family)
+#404
+write.csv(summary (traits$family, maxsum=404), "summary_traits_family.csv")
+
+summary (traits$bodyshape)
+# eel-like           elongated 
+#               1034                4013 
+#  fusiform / normal               other 
+#               3437                 452 
+#other (see remarks) short and / or deep 
+#                 11                2078 
+#               NA's 
+#               1179 
+summary (traits$demerspelag)
+#bathydemersal    bathypelagic   benthopelagic        demersal         pelagic pelagic-neritic pelagic-oceanic 
+#           1529            1110             933            3950               2             487             338 
+#reef-associated 
+#           3855 
+summary (traits$importance)
+#           commercial     highly commercial      minor commercial        of no interest of potential interest 
+#                 1285                   180                  1407                  1293                    51 
+#subsistence fisheries                  NA's 
+#                  303                  7685 
+summary (traits$pricecateg)
+#     high       low    medium   unknown very high      NA's 
+#     1339       562      2193      4717      2151      124
+summary (traits$FeedingType)
+# browsing on substrate              feeding on a host (parasite) 
+#                                       75                                         7 
+#      feeding on dead animals (scavenger) feeding on the prey of a host (commensal) 
+#                                        4                                         1 
+#                       filtering plankton                 grazing on aquatic plants 
+#                                       59                                       386 
+#            hunting macrofauna (predator)                                     other 
+#                                     3252                                         8 
+#   picking parasites off a host (cleaner)                selective plankton feeding 
+#                                       13                                       527 
+#         sucking food-containing material                                  variable 
+#                                        3                                       388 
+#                                     NA's 
+#                                     7481 
+summary (traits$fecuntype)
+#annual fecundity            batch fecundity                     others potential annual fecundity 
+#                        23                         16                          1                          1 
+#           total fecundity                       NA's 
+#                         8                      12155 
+summary (traits$fecun_min)
+
+summary (traits$SexualAttributes)
+#claspers (m)   different shape of head (f,m)                  gonopodium (m) 
+#                             15                               2                               2 
+#              no special organs                           other protruding genital papilla (am) 
+#                            630                             200                               3 
+# protruding genital papilla (m)                            NA's 
+#                             18                           11334 
+summary (traits$SexMorphology)
+#always different morphology between mature adults  different morphology during breeding season only 
+#                                              260                                                 4 
+#     different morphology in juveniles and adults                               males alike females 
+#                                               20                                               563 
+#                                             NA's 
+#                                           11357 
+summary (traits$TypeofEyes)
+#asymmetric           eyes divided into upper and lower part 
+#                                               5                                                1 
+#  eyes with fixed fatty (adipose) tissue/eyelids                              more or less normal 
+#                                              15                                             2371 
+#                           other (see diagnosis)                            other (see Diagnosis) 
+#                                               6                                                3 
+#                             other (see remarks) positioned on stalks, very prominent, or tubular 
+#                                               6                                               11 
+#                                            NA's 
+#                                            9786 
+summary (traits$PosofMouth)
+#sub-terminal/inferior              superior              terminal                  NA's 
+#                  397                   419                  1846                  9542 
+summary (traits$TypeofMouth)
+# clearly protrusible                 funnel-like lower jaw greatly elongated         more or less normal 
+#                         24                           1                           7                        2285 
+#      other (see diagnosis)       other (see Diagnosis)         other (see remarks)                 sucker-like 
+#                         18                          15                           4                           5 
+#                  tube-like upper jaw greatly elongated                        NA's 
+#                        186                           3                        9656 
+summary (traits$CaudalFinI)
+#more than one spot or stripe          no spots or stripes           one spot or stripe                         NA's 
+#                         432                         1332                           68                        10372
+summary (traits$PelvicsAttributes)
+#                aberrant asymmetric in size/position     joint to one spine only             joint, cup-like 
+#                         50                          11                          31                          53 
+# largely reduced to one ray         more or less normal       other (see diagnosis)       other (see Diagnosis) 
+#                         11                        3033                          96                           2 
+#        other (see remarks)         part of sucker-disc         rays very elongated        reduced to filaments 
+#                         20                          61                          62                          38 
+#          suppressed/absent                        NA's 
+#                        373                        8363 
+summary (traits$IUCN_Code)
+#  CR    DD    EN    LC LR/lc LR/nt  N.A.  N.E.    NT    VU 
+#   38   811    62  5403     1     3     2  5508   160   216 
+levels(traits$IUCN_Code)
+summary (traits$Protected)
+
+summary (traits$EnvTemp)
+# boreal  deep-water       polar subtropical   temperate    tropical 
+#         22        2849         142        2132        1218        5841 
+summary (traits$Resilience)
+#    High      Low   Medium Very low     NA's 
+#    5458     1527     3887      498      834 
+summary (traits$AdultType)
+#  movements of body and/or caudal fin oscillation of median or pectoral fins  undulation of median or pectoral fins 
+#                                   901                                    325                                    717 #                                  NA's 
+#                                 10261 
+
+traits_FD <- subset(traits, select=c("am_sid", "class", "order", "family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm","depthrangedeep","demerspelag","EnvTemp","FeedingType","bodyshape",  "IUCN_Code", "Resilience","pd50" , "vulnerability", "importance", "pricecateg"))
+
+head (traits_FD)
+write.csv (traits_FD , file = "traits_FD.csv")
+
+# importing species raw trait values from a csv file: row names are in the column named 'am_sid'
+traits_FD<-read.csv("traits_FD.csv", header=T, row.names = "am_sid")
+head (traits_FD)
+traits_FD<-select(traits_FD, -"X", -"class", -"order", -"family") 
+
+# ASSEMBLAGE MATRIX 
+# importing biomass of species in assemblages from a csv file: loiczid are in the first column and will be used as row names
+assemblage<-read.csv('assemblages_matrix_ok.csv', header=T)
+
+names(assemblage) <- gsub(x = names(assemblage),
+                        pattern = "\\.",
+                        replacement = "-")
+as.tibble (assemblage)
+
+assemblage <- select(assemblage, -"X-1", -"X") 
+
+assemblage_ok <- column_to_rownames(assemblage, var = "loiczid")
+
+as.tibble (assemblage_ok)
+
+# FD CALCULATIONS
+
+# checking that species names are the same in the two matrices
+sum(row.names(traits_FD) %in% colnames(assemblage_ok)) == ncol(assemblage_ok)
+
+# empty dataframe to store trait values
+traits_FD_ok<-as.data.frame( matrix(NA, nrow(traits_FD), ncol(traits_FD), 
+                  dimnames=list( row.names(traits_FD), names(traits_FD) ) ) ) 
+
+  
+# demerspelag grouped from 8 levels:  #bathydemersal/bathypelagic/benthopelagic/demersal/pelagic/pelagic-neritic/pelagic-oceanic/reef-associated
+#into 3: 
+#demersal (bathydemersal + demersal) pelagic (bathypelagic + benthopelagic + pelagic + pelagic-neritic + pelagic-oceanic) and reef-associated 
+
+traits_FD_ok [,"demerspelag"]<-as.character(traits_FD [,"demerspelag"])
+traits_FD_ok[which(traits_FD_ok[,"demerspelag"]=="bathydemersal"),"demerspelag"]<-"demersal"
+traits_FD_ok[which(traits_FD_ok[,"demerspelag"]=="bathypelagic"),"demerspelag"]<-"pelagic"
+traits_FD_ok[which(traits_FD_ok[,"demerspelag"]=="benthopelagic"),"demerspelag"]<-"pelagic"
+traits_FD_ok[which(traits_FD_ok[,"demerspelag"]=="pelagic-neritic"),"demerspelag"]<-"pelagic"
+traits_FD_ok[which(traits_FD_ok[,"demerspelag"]=="pelagic-oceanic"),"demerspelag"]<-"pelagic"
+
+traits_FD_ok[,"demerspelag"]<-factor(traits_FD_ok[,"demerspelag"], levels=c("demersal", "pelagic", "reef-associated" ), ordered = TRUE )
+
+#Bodyshape other + other (see remmarks)
+traits_FD_ok [,"bodyshape"]<-as.character(traits_FD [,"bodyshape"])
+traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="other (see remarks)"),"bodyshape"]<-"other"
+
+traits_FD_ok[,"bodyshape"]<-factor(traits_FD_ok[,"bodyshape"], levels=c("short and / or deep", "fusiform / normal", "elongated", "eel-like", "other" ), ordered = TRUE )
+
+#IUCN TO 7 levels, LR/lc to LC and LR/nt to NT
+traits_FD_ok [,"IUCN_Code"]<-as.character(traits_FD [,"IUCN_Code"])
+traits_FD_ok[which(traits_FD_ok[,"IUCN_Code"]=="LR/lc"),"IUCN_Code"]<-"LC"
+traits_FD_ok[which(traits_FD_ok[,"IUCN_Code"]=="LR/nt"),"IUCN_Code"]<-"NT"
+traits_FD_ok[which(traits_FD_ok[,"IUCN_Code"]=="N.A."),"IUCN_Code"]<-"NE"
+traits_FD_ok[which(traits_FD_ok[,"IUCN_Code"]=="N.E."),"IUCN_Code"]<-"NE"
+
+traits_FD_ok[,"IUCN_Code"]<-factor(traits_FD_ok[,"IUCN_Code"], levels=c("CR", "DD", "EN", "LC", "NE", "NT", "VU"), ordered = TRUE )
+
+summary (traits_FD_ok$IUCN_Code)
+
+#Resilience TO 3 levels
+traits_FD_ok [,"Resilience"]<-as.character(traits_FD [,"Resilience"])
+traits_FD_ok[which(traits_FD_ok[,"Resilience"]=="Very low"),"Resilience"]<-"Low"
+
+
+traits_FD_ok[,"Resilience"]<-factor(traits_FD_ok[,"Resilience"], levels=c("High", "Medium", "Low"), ordered = TRUE )
+
+#EnvTemp no changes
+traits_FD_ok [,"EnvTemp"]<-as.character(traits_FD [,"EnvTemp"])
+
+traits_FD_ok[,"EnvTemp"]<-factor(traits_FD_ok[,"EnvTemp"], levels=c("boreal", "deep-water", "polar", "subtropical", "temperate", "tropical"), ordered = TRUE )
+
+
+traits_FD_ok <- select (traits_FD_ok, -"FeedingType", -"importance", -"pricecateg")
+
+# ordinal traits converted to "ordered" mode
+
+traits_FD_ok[,"Loo"]<-as.numeric( traits_FD[,"Loo"] )
+traits_FD_ok[,"K"]<-as.numeric( traits_FD[,"K"] )
+traits_FD_ok[,"Winfinity"]<-as.numeric( traits_FD[,"Winfinity"] )
+traits_FD_ok[,"tmax"]<-as.numeric( traits_FD[,"tmax"] )
+traits_FD_ok[,"tm"]<-as.numeric( traits_FD[,"tm"] )
+traits_FD_ok[,"M"]<-as.numeric( traits_FD[,"M"] )
+traits_FD_ok[,"Lm"]<-as.numeric( traits_FD[,"Lm"] )
+traits_FD_ok[,"depthrangedeep"]<-as.numeric( traits_FD[,"depthrangedeep"] )
+traits_FD_ok[,"pd50"]<-as.numeric( traits_FD[,"pd50"] )
+traits_FD_ok[,"vulnerability"]<-as.numeric( traits_FD[,"vulnerability"] )
+
+summary(traits_FD_ok)
+
+#remove those traits that contain NAs
+traits_FD_ok <- select (traits_FD_ok, -"bodyshape", -"Resilience", -"pd50", -"depthrangedeep")
+
+write.csv (traits_FD_ok , file = "traits_FD_ok.csv")
+# comparing before/after conversion
+is.ordered(traits_FD[,"EnvTemp"])
+is.ordered(traits_FD_ok[,"EnvTemp"])
+
+# species names and codes (for graphics)
+species_names<-row.names(traits_FD_ok)
+species_codes<-row.names(traits_FD_ok)
+
+
+##############################################################################################
+##############################################################################################
+
+# sourcing "homemade" R functions
+
+# setting working directory
+#Desde MAZU:
+my_path<-"/home/valle/github/Tutorial_FD" 
+#  <= PUT direction of the folder where you saved the zipfile containing functions and data
+#Desde mi portatil
+#my_path<-"N:/github/Tutorial_FD"
+# loading functions
+setwd( paste(my_path,"/functions", sep="") ) # folder where R functions have been saved
+source("quality_funct_space.R")
+source("plot_funct_space.R")
+source("multidimFD.R")
+source("multidimFbetaD.R")
+
+# FUNCTIONAL SPACE
+
+setwd( paste(my_path,"/FutureSeaResults/plot_funct_space", sep="") )  # setting working directory for results
+
+# computing all functional spaces based on dendrogram or PCoA (up to 10 axes)
+# NOTE: you need to be connected to internet for a correct functioning of quality_funct_space function
+
+install.packages ("ape")
+install.packages("clue")
+install.packages("cluster")
+install.packages("geometry")
+install.packages("gtools")
+
+qual_funct_space<-quality_funct_space(traits_FD_ok, traits_weights=NULL, nbdim=10, metric="Gower", dendro=TRUE, plot="quality_funct_space_MarineFish")
+
+qual_funct_space$meanSD # => best space has 4 dimensions + have a look to the "quality_funct_space_fruits.jpeg" file in the /results folder
+# mean Squared-Deviation of 0.0029 means that average deviation between Euclidean distance and Gower's distance is of (0.0029)^0.5=0.054, so it can be seen like an average error of 5%
+
+# species coordinates in the best space
+coord_fruits_4D<-qual_funct_space$details_funct_space$mat_coord[,1:4]
+
+#################################
+# few examples of how exploring functional space
+
+# plot of 4D functional space => look to the jpeg file in the ".../results/plot_funct_space" folder
+plot_funct_space( coord_fruits_4D,col_sp="blue", pch_sp=21, nm_jpeg="Fspace_fruits_4D.jpeg", cex_sp=1.6, close_jpeg=TRUE   )
+
+# looking at position of all species in the 4D space
+plot_funct_space( coord_fruits_4D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.58,0.48), col_sp="blue", pch_sp=species_codes, nm_jpeg="Fspace_fruits_codes_12.jpeg", cex_sp=0.6, close_jpeg=TRUE   )
+plot_funct_space( coord_fruits_4D, Faxes=c( "PC3","PC4"), Faxes_lim=c(-0.58,0.48), col_sp="blue", pch_sp=species_codes, nm_jpeg="Fspace_fruits_codes_34.jpeg", cex_sp=0.6, close_jpeg=TRUE   )
+
+# looking at position of 3 particular species on the 2 first PC axes
+plot_funct_space( coord_fruits_4D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.55,0.45), col_sp="grey50", pch_sp="+", nm_jpeg="Fspace_fruits_12_3species.jpeg", cex_sp=0.6, close_jpeg=FALSE   ) # all species plotted with crosses, not closing the jpeg
+text(coord_fruits_4D[c("cherry","lime","lemon"),1:2], c("cherry","lime","lemon"), cex=0.8, col="red3" ) # adding species codes for only 3 species
+graphics.off() # closing the jpeg
+
+# looking at distribution of values for one trait in the functional space
+plot_funct_space( coord_fruits_4D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.58,0.48), col_sp=as.factor(traits_fruits[,"Plant"]), pch_sp=21, nm_jpeg="Fspace_fruits_12_plant.jpeg", cex_sp=0.6, close_jpeg=FALSE   ) # points color defined according to values of this categorical trait, not closing the jpeg
+plot(0:5,0:5,type="n", axes=F,xlab="", ylab="") # empty plot for legend on the right panel
+points(rep(1.8,4), 1:4, pch=21, cex=2, bg=as.factor(levels(traits_fruits[,"Plant"])) ) 
+text(rep(2,4), 1:4, levels(traits_fruits[,"Plant"]), cex=2, adj=0 ) 
+graphics.off() # closing the jpeg
+
+##############################################################################################
+# illustration of bias induced by functional dendrogram or space of low dimensionality
+
+# functional differences between lime and lemon and lime and cherry
+
+# trait values
+traits_fruits[c("cherry","lime","lemon"),]
+
+# raw distance based on traits values 
+round(as.matrix(qual_funct_space$details_funct_space$mat_dissim)[c("cherry","lime","lemon"),c("cherry","lime","lemon")],3)
+# => lime is >3 times closer to lemon than to cherry
+
+##################################
+# plot of best functional dendrogram
+plot(qual_funct_space$details_funct_space$best_tree, sub="", main="UPGMA", xlab="", h=-1)
+# look at position of lime on the tree
+
+# cophenetic distance on best dendrogram 
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$t_UPGMA)[c("cherry","lime","lemon"),c("cherry","lime","lemon")],3) 
+# lime as far to lemon than to cherry => dendrogram overestimates distance between some pairs of species actually close
+
+# most extreme species is the pineapple
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$t_UPGMA)["pineapple",],2) 
+# by definition of an ultrametric dendrogram, a species is at the same distance to all species not on the same main branch (i.e. descending from the root), here 0.56 for cophenetic distance between pineapple and all species but litchi, banana and mango.
+
+round( as.matrix(qual_funct_space$details_funct_space$mat_dissim)["pineapple",],2)
+# however trait-based distance between pineapple and these species actually ranges from 0.43 (melon) to 0.84 (grape), i.e. by almost a two-fold factor 
+# correlation between distance on the dendrogram vs Gower distance for pairs between pineapple and other fruits
+plot( x=as.matrix(qual_funct_space$details_funct_space$mat_dissim)["pineapple",], y=as.matrix(qual_funct_space$details_funct_space$dist_raw$t_UPGMA)["pineapple",], xlab="Gower Dist on trait values", ylab="Dist on UPGMA dendro", pch=16, cex=0.7  )
+# no strong correlation : 2 horizontal lines of points with the points close to y=0.4 corresponding to pineapple vs ( banana, litchi or mango)
+# and the points at y=0.56 corresponding to distance between pineapple and all other fruits
+# => dendrogram overestimates some distances and homogenize them (lower variability than with Gower distance)
+
+##################################
+# distance in the 2D space 
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$m_2D)[c("cherry","lime","lemon"),c("cherry","lime","lemon")],3)
+# lime 2.4 times closer to lemon than to cherry (instead of 3 based on trait values)
+# => look at position of these 3 species on PC1-PC2 on "Fspace_fruits_codes_12.jpeg", cherry is not that far from both Citrus species
+
+##################################
+# distance in the 4D space 
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$m_4D)[c("cherry","lime","lemon"),c("cherry","lime","lemon")],3)
+# lime 2.4 times closer to lemon than to cherry
+# => look at position of these 3 species on PC3-PC4 on "Fspace_fruits_4D.jpeg", cherry is far from both Citrus species
+
+# correlation between distance in the 4D space vs Gower distance for pairs between pineapple and other fruits
+plot( x=as.matrix(qual_funct_space$details_funct_space$mat_dissim)["pineapple",], y=as.matrix(qual_funct_space$details_funct_space$dist_raw$m_4D)["pineapple",], xlab="Gower Dist on trait values", ylab="Dist in 4D space", pch=16, cex=0.7  )
+# strong correlation between Euclidean distance in the 4D space and Gower distance => no overestimation, no homogenization
+
+##############################################################################################
+##############################################################################################
+
+# MULTIDIMENSIONAL FUNCTIONAL DIVERISTY INDICES
+
+# computing Functional diversity indices with plots of FD indices put in a subfolder named plot_FD
+
+FD_baskets<-multidimFD(coord_fruits_4D, weight_fruits_baskets, check_species_pool=TRUE, verb=TRUE,
+                      nm_asb_plot=row.names(weight_fruits_baskets), folder_plot= paste(my_path,"/results/plot_FD", sep=""),
+                      Faxes_plot=colnames(coord_fruits_4D)[1:4], Faxes_nm_plot=colnames(coord_fruits_4D)[1:4],
+                      plot_pool=TRUE, col_bg="grey90", col_sp_pool="grey30",  pch_sp_pool="+", cex_sp_pool=1, 
+                      pch_sp=21, col_sp="#1E90FF", transp=50 )
+
+# printing results = rounded FD indices values
+round(FD_baskets,3)
+
+
+# look to the folder "../results/plot_FD"
+##############################################################################################
+# MULTIDIMENSIONAL FUNCTIONAL BETA DIVERISTY INDICES
+
+# occurences from species weights
+occ_fruits_baskets<-weight_fruits_baskets
+occ_fruits_baskets[which(occ_fruits_baskets>0)]<-1
+
+# indices computation for all pairs of asssemblages, plot only on 3 first axes
+FbetaD_baskets<-multidimFbetaD ( coord=coord_fruits_4D,  occ=occ_fruits_baskets,  check_species_pool=FALSE, verb=TRUE,
+                  nm_asb_plot=row.names(occ_fruits_baskets) , folder_plot= paste(my_path,"/results/plot_FbetaD", sep="") , 
+                  Faxes_plot=colnames(coord_fruits_4D)[1:3] , Faxes_nm_plot=colnames(coord_fruits_4D)[1:3] )
+
+# printing results
+FbetaD_baskets
+
+# look to the folder "../results/plot_FbetaD"
+
+##############################################################################################
+# saving R objects
+
+setwd( paste(my_path,"/results", sep="") ) # setting working directory for results
+
+save(traits_fruits, file="traits_fruits")
+save(weight_fruits_baskets, file="weight_fruits_baskets")
+save(species_codes, file="species_codes")
+save(coord_fruits_4D, file="coord_fruits_4D")
+save(FD_baskets, file="FD_baskets")
+save(FbetaD_baskets, file="FbetaD_baskets")
+
+##############################################################################################
+# Going one step further: example of how running a null model
+# here we want to test H0: Basket_4 results from a random sorting of species in the regional species pool (i.e. all species) given its species richness (SR). To keep the example simple, will focus only on FRic index so taking into account only species composition, not species weights.
+
+
+# picking assemblages of SR(basket_4) species at random among the 25 fruits
+nbrep<-99 # number of replicates
+SR_basket_4<-FD_baskets["basket_4","Nb_sp"]
+SR_basket_4 # 8 species`
+
+# empty matrix to store simulated species occurences
+basket_4_H0<-matrix(0, nbrep, ncol(weight_fruits_baskets), dimnames=list(1:nbrep, colnames(weight_fruits_baskets) ) )
+for (k in 1:nbrep)
+{
+  basket_4_H0[k, sample(  colnames(weight_fruits_baskets), SR_basket_4) ]<-1 # random sorting of species
+}# end of k
+
+# computing FD indices on these assemblages, check_species_pool=FALSE since by chance some species could be never picked but this is not an issue
+FD_basket_4_H0<-multidimFD(coord_fruits_4D, basket_4_H0,  check_species_pool=FALSE )
+
+# comparing observed and expected values under H0 using SES and p-value metrics
+SES_FRic_basket_4<- (FD_baskets["basket_4","FRic"]-mean(FD_basket_4_H0[,"FRic"]) ) / sd(FD_basket_4_H0[,"FRic"])
+SES_FRic_basket_4 # SES<(-1) means that observed FRic is lower than expected
+  
+pvalue_FRic_basket_4<- length(which(FD_baskets["basket_4","FRic"]<=FD_basket_4_H0[,"FRic"]))/ ( length(FD_basket_4_H0[,"FRic"]) +1 )
+pvalue_FRic_basket_4 # p-value >0.975 => FRic is significantly lower than expected under H0
+
+
+##############################################################################################
+# END
+##############################################################################################
+
+
+
