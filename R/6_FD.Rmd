@@ -5,11 +5,8 @@ date: "9/2/2019"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 #1.- THE SPECIES POOL ON THE ASSEMBLAGE MATRIX AND THE TRAITS SHOULD BE THE SAME, THEN WE NEED TO PREPARE OUR TABLES:
-
+```{r}
 #read the assemblage_matrix
 assemblage <- read.csv('spread_loiczid_spp.csv') #168700 obs of 12365
 as.tibble (assemblage)
@@ -18,6 +15,8 @@ as.tibble (assemblage)
 names(assemblage) <- gsub(x = names(assemblage),
                         pattern = "\\.",
                         replacement = "-")
+
+#verify is changes have been correctly done
 as.tibble (assemblage)
 
 #create a dataframe with the code of the fish species contained in the assemblage matrix
@@ -45,15 +44,18 @@ sum(is.na(traits$am_sid))
 
 #left join the list of species that we have within the assemblage matrix to the traits matrix
 traits_spp <- left_join (spp, traits, by= "am_sid")
+
 as.tibble (traits_spp)
 unique (traits_spp$am_sid) %>% length () #12363
 unique (traits_spp$sciname) %>% length () #12205
 sum(is.na(traits_spp$sciname))#159
 
 #create a new traits matrix with the species that are in both the assemblage and the traits matrix
+
 traits_spp_ok <- traits_spp[!is.na(traits_spp$sciname), ]
 unique (traits_spp_ok$am_sid) %>% length () #12204
 as.tibble (traits_spp_ok)
+
 #we save the TRAITS MATRIX 
 write.csv (traits_spp_ok , file = "traits_spp_ok.csv")
 
@@ -65,13 +67,16 @@ unique (spp_list$am_sid) %>% length () #12204
 write.csv (spp_list, file = "spp_list.csv")
 
 #we create a table which contains the am_sid of those species from the assemblage matrix that had NA value on the traits matrix
+
 traits_spp_NA <- filter (traits_spp, is.na(traits_spp$sciname))
 
 #we create a table selecting the am_sid code
+
 spp_list_NA <- subset(traits_spp_NA, select=c("am_sid"))
 head (spp_list_NA)
 
 #using the table with the am_sid code of those species that were filled by NAs on the traits matrix, we create a list "drops" that contains the am_sid codes of the species we want to remove from the assemblage matrix
+
 drops <- c(spp_list_NA$am_sid)
 assemblage_ok <-assemblage[ , !(names(assemblage) %in% drops)]
 as.tibble (assemblage_ok)
@@ -79,10 +84,10 @@ str (assemblage_ok)
 
 #we save the ASSEMBLAGE MATRIX
 write.csv (assemblage_ok, file = "assemblages_matrix_ok.csv")
-
+```
 
 #2.- FUNCTIONAL DIVERSITY 
-
+```{r}
 traits<- read.csv ("traits_spp_ok .csv") 
 assemblage <- read.csv('assemblages_matrix_ok.csv') 
 
@@ -93,10 +98,12 @@ traits$class
 
 levels (traits$order)
 #53
+
 write.csv(summary (traits$order), "summary_traits_order.csv")
 
 levels (traits$family)
 #404
+
 write.csv(summary (traits$family, maxsum=404), "summary_traits_family.csv")
 
 summary (traits$bodyshape)
@@ -108,19 +115,23 @@ summary (traits$bodyshape)
 #                 11                2078 
 #               NA's 
 #               1179 
+
 summary (traits$demerspelag)
 #bathydemersal    bathypelagic   benthopelagic        demersal         pelagic pelagic-neritic pelagic-oceanic 
 #           1529            1110             933            3950               2             487             338 
 #reef-associated 
 #           3855 
+
 summary (traits$importance)
 #           commercial     highly commercial      minor commercial        of no interest of potential interest 
 #                 1285                   180                  1407                  1293                    51 
 #subsistence fisheries                  NA's 
 #                  303                  7685 
+
 summary (traits$pricecateg)
 #     high       low    medium   unknown very high      NA's 
 #     1339       562      2193      4717      2151      124
+
 summary (traits$FeedingType)
 # browsing on substrate              feeding on a host (parasite) 
 #                                       75                                         7 
@@ -136,11 +147,13 @@ summary (traits$FeedingType)
 #                                        3                                       388 
 #                                     NA's 
 #                                     7481 
+
 summary (traits$fecuntype)
 #annual fecundity            batch fecundity                     others potential annual fecundity 
 #                        23                         16                          1                          1 
 #           total fecundity                       NA's 
 #                         8                      12155 
+
 summary (traits$fecun_min)
 
 summary (traits$SexualAttributes)
@@ -150,6 +163,7 @@ summary (traits$SexualAttributes)
 #                            630                             200                               3 
 # protruding genital papilla (m)                            NA's 
 #                             18                           11334 
+
 summary (traits$SexMorphology)
 #always different morphology between mature adults  different morphology during breeding season only 
 #                                              260                                                 4 
@@ -157,6 +171,7 @@ summary (traits$SexMorphology)
 #                                               20                                               563 
 #                                             NA's 
 #                                           11357 
+
 summary (traits$TypeofEyes)
 #asymmetric           eyes divided into upper and lower part 
 #                                               5                                                1 
@@ -168,9 +183,11 @@ summary (traits$TypeofEyes)
 #                                               6                                               11 
 #                                            NA's 
 #                                            9786 
+
 summary (traits$PosofMouth)
 #sub-terminal/inferior              superior              terminal                  NA's 
 #                  397                   419                  1846                  9542 
+
 summary (traits$TypeofMouth)
 # clearly protrusible                 funnel-like lower jaw greatly elongated         more or less normal 
 #                         24                           1                           7                        2285 
@@ -178,9 +195,11 @@ summary (traits$TypeofMouth)
 #                         18                          15                           4                           5 
 #                  tube-like upper jaw greatly elongated                        NA's 
 #                        186                           3                        9656 
+
 summary (traits$CaudalFinI)
 #more than one spot or stripe          no spots or stripes           one spot or stripe                         NA's 
 #                         432                         1332                           68                        10372
+
 summary (traits$PelvicsAttributes)
 #                aberrant asymmetric in size/position     joint to one spine only             joint, cup-like 
 #                         50                          11                          31                          53 
@@ -190,23 +209,29 @@ summary (traits$PelvicsAttributes)
 #                         20                          61                          62                          38 
 #          suppressed/absent                        NA's 
 #                        373                        8363 
+
 summary (traits$IUCN_Code)
 #  CR    DD    EN    LC LR/lc LR/nt  N.A.  N.E.    NT    VU 
 #   38   811    62  5403     1     3     2  5508   160   216 
+
 levels(traits$IUCN_Code)
+
 summary (traits$Protected)
 
 summary (traits$EnvTemp)
 # boreal  deep-water       polar subtropical   temperate    tropical 
 #         22        2849         142        2132        1218        5841 
+
 summary (traits$Resilience)
 #    High      Low   Medium Very low     NA's 
 #    5458     1527     3887      498      834 
+
 summary (traits$AdultType)
 #  movements of body and/or caudal fin oscillation of median or pectoral fins  undulation of median or pectoral fins 
 #                                   901                                    325                                    717 #                                  NA's 
 #                                 10261 
 
+#We create a dataframe subseting those traits that we want to keep
 traits_FD <- subset(traits, select=c("am_sid", "class", "order", "family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm","depthrangedeep","demerspelag","EnvTemp","FeedingType","bodyshape",  "IUCN_Code", "Resilience","pd50" , "vulnerability", "importance", "pricecateg"))
 
 head (traits_FD)
@@ -218,7 +243,7 @@ head (traits_FD)
 traits_FD<-select(traits_FD, -"X", -"class", -"order", -"family") 
 
 # ASSEMBLAGE MATRIX 
-# importing biomass of species in assemblages from a csv file: loiczid are in the first column and will be used as row names
+# importing data of species in assemblages from a csv file: loiczid are in the first column and will be used as row names
 assemblage<-read.csv('assemblages_matrix_ok.csv', header=T)
 
 names(assemblage) <- gsub(x = names(assemblage),
@@ -231,9 +256,9 @@ assemblage <- select(assemblage, -"X-1", -"X")
 assemblage_ok <- column_to_rownames(assemblage, var = "loiczid")
 
 as.tibble (assemblage_ok)
-
-# FD CALCULATIONS
-
+```
+# PREPARING THE DATA FOR FD CALCULATIONS
+```{r}
 # checking that species names are the same in the two matrices
 sum(row.names(traits_FD) %in% colnames(assemblage_ok)) == ncol(assemblage_ok)
 
@@ -241,9 +266,11 @@ sum(row.names(traits_FD) %in% colnames(assemblage_ok)) == ncol(assemblage_ok)
 traits_FD_ok<-as.data.frame( matrix(NA, nrow(traits_FD), ncol(traits_FD), 
                   dimnames=list( row.names(traits_FD), names(traits_FD) ) ) ) 
 
-  
-# demerspelag grouped from 8 levels:  #bathydemersal/bathypelagic/benthopelagic/demersal/pelagic/pelagic-neritic/pelagic-oceanic/reef-associated
+# demerspelag grouped from 8 levels:  
+
+#bathydemersal/bathypelagic/benthopelagic/demersal/pelagic/pelagic-neritic/pelagic-oceanic/reef-associated
 #into 3: 
+
 #demersal (bathydemersal + demersal) pelagic (bathypelagic + benthopelagic + pelagic + pelagic-neritic + pelagic-oceanic) and reef-associated 
 
 traits_FD_ok [,"demerspelag"]<-as.character(traits_FD [,"demerspelag"])
@@ -256,12 +283,14 @@ traits_FD_ok[which(traits_FD_ok[,"demerspelag"]=="pelagic-oceanic"),"demerspelag
 traits_FD_ok[,"demerspelag"]<-factor(traits_FD_ok[,"demerspelag"], levels=c("demersal", "pelagic", "reef-associated" ), ordered = TRUE )
 
 #Bodyshape other + other (see remmarks)
+
 traits_FD_ok [,"bodyshape"]<-as.character(traits_FD [,"bodyshape"])
 traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="other (see remarks)"),"bodyshape"]<-"other"
 
 traits_FD_ok[,"bodyshape"]<-factor(traits_FD_ok[,"bodyshape"], levels=c("short and / or deep", "fusiform / normal", "elongated", "eel-like", "other" ), ordered = TRUE )
 
 #IUCN TO 7 levels, LR/lc to LC and LR/nt to NT
+
 traits_FD_ok [,"IUCN_Code"]<-as.character(traits_FD [,"IUCN_Code"])
 traits_FD_ok[which(traits_FD_ok[,"IUCN_Code"]=="LR/lc"),"IUCN_Code"]<-"LC"
 traits_FD_ok[which(traits_FD_ok[,"IUCN_Code"]=="LR/nt"),"IUCN_Code"]<-"NT"
@@ -273,13 +302,14 @@ traits_FD_ok[,"IUCN_Code"]<-factor(traits_FD_ok[,"IUCN_Code"], levels=c("CR", "D
 summary (traits_FD_ok$IUCN_Code)
 
 #Resilience TO 3 levels
+
 traits_FD_ok [,"Resilience"]<-as.character(traits_FD [,"Resilience"])
 traits_FD_ok[which(traits_FD_ok[,"Resilience"]=="Very low"),"Resilience"]<-"Low"
-
 
 traits_FD_ok[,"Resilience"]<-factor(traits_FD_ok[,"Resilience"], levels=c("High", "Medium", "Low"), ordered = TRUE )
 
 #EnvTemp no changes
+
 traits_FD_ok [,"EnvTemp"]<-as.character(traits_FD [,"EnvTemp"])
 
 traits_FD_ok[,"EnvTemp"]<-factor(traits_FD_ok[,"EnvTemp"], levels=c("boreal", "deep-water", "polar", "subtropical", "temperate", "tropical"), ordered = TRUE )
@@ -318,11 +348,10 @@ is.ordered(traits_FD_ok[,"EnvTemp"])
 # species names and codes (for graphics)
 species_names<-row.names(traits_FD_ok)
 species_codes<-row.names(traits_FD_ok)
+```
 
-
-##############################################################################################
-##############################################################################################
-
+# FD CALCULATIONS
+```{r}
 # sourcing "homemade" R functions by Sebastien Villeger (http://villeger.sebastien.free.fr/Rscripts.html)
 
 # setting working directory
@@ -352,5 +381,5 @@ install.packages("geometry")
 install.packages("gtools")
 
 qual_funct_space<-quality_funct_space(traits_FD_ok, traits_weights=NULL, nbdim=10, metric="Gower", dendro=TRUE, plot="quality_funct_space_MarineFish")
-
+```
 

@@ -1,0 +1,215 @@
+---
+title: "7_Mapping traits"
+author: "Mireia Valle"
+date: "10/7/2019"
+output: html_document
+---
+
+#------------------------------------------------------------------------------------- #
+#-LOADING Required Libraries 
+#------------------------------------------------------------------------------------- #
+#libraries for spatial analysis
+```{r setup}
+require(foreign)
+require(sp)
+library(raster)       #Main raster library with nearly all functions used in this analysis
+library(rgdal)        #Spatial library - most functions used from rgdal are for vectors (shapefiles)
+require(maptools)
+```
+#for data management
+```{r setup}
+library (tibble)
+library (tidyverse) 
+library(dplyr)        #a data wrangling library
+library (data.table)
+library (reshape)
+library (dbplyr)
+```
+
+#See WORKING DIRECTORY
+```{r setup}
+getwd()
+```
+#------------------------------------------------------------------------------------- #
+# LOADING DATA OF SPECIES WITH LIFE TRAITS INFORMATION GOTTEN FROM FISHLIFE AND FISHBASE
+#------------------------------------------------------------------------------------- #
+```{r setup}
+
+traits<- read.csv ("/home/valle/github_annex/traits_FD_ok.csv") 
+as.tibble (traits)
+colnames (traits)
+summary (traits)
+
+#Editing colnames
+traits <- traits %>%
+  select(am_sid = X, Loo = Loo, K = K, Winfinity = Winfinity, tmax = tmax, tm =tm, M = M, Lm = Lm, demerspelag = demerspelag, EnvTemp = EnvTemp) 
+
+#Key by "am_sid"
+traits_keyed <- data.table(traits, key = "am_sid") 
+
+#remove not keyed dataframe
+rm (traits)
+```
+#------------------------------------------------------------------------------------- #
+# LOADING AQUAMAPS DATA 
+#------------------------------------------------------------------------------------- #
+#loading hs table with information about the probability of occurrence of species
+```{r setup}
+hs <- read.csv('/home/valle/github_annex/Aquamaps/d2018/hcaf_species_native_ver0816c_fixed.csv', sep=',', header = TRUE)
+
+head (hs)
+
+colnames (hs)
+
+#important column in this table : "am_sid" which we are going to use as key
+hs_keyed <- data.table(hs,  key = "am_sid")
+head (hs_keyed)
+class(hs_keyed)
+#rmeove not keyed dataframe
+rm(hs)
+```
+#------------------------------------------------------------------------------------- #
+#CREATING NEW JOINED TABLE USING am_sid KEY
+#------------------------------------------------------------------------------------- #
+```{r setup}
+species_hs <- hs_keyed[traits_keyed] %>%
+  setkey(NULL)
+
+head (species_hs)
+
+colnames (species_hs)
+
+#remove both dataframes
+rm(traits_keyed)
+rm (hs_keyed)
+
+#unique am_sid values
+unique (species_hs$am_sid) %>% length()#12204
+
+#is there any NA?
+table(is.na (species_hs))
+
+#which is the structure
+str(species_hs)
+
+#levels of those variables that are factors
+table (species_hs$demerspelag)
+
+table (species_hs$EnvTemp)
+```
+#------------------------------------------------------------------------------------- #
+# Creating a raster with LOICID value #
+#------------------------------------------------------------------------------------- #
+```{r setup}
+basemap <- raster (ext= extent (c(-180,180, -90, 90)), res=0.5)
+values (basemap) <- 1:length (basemap)
+basemap
+
+#class       : RasterLayer 
+#dimensions  : 360, 720, 259200  (nrow, ncol, ncell)
+#resolution  : 0.5, 0.5  (x, y)
+#extent      : -180, 180, -90, 90  (xmin, xmax, ymin, ymax)
+#coord. ref. : +proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0 
+#data source : in memory
+#names       : layer 
+#values      : 1, 259200  (min, max)
+
+plot (basemap)
+writeRaster(basemap, "basemap", format = "GTiff")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF ALL 12,204 SPECIES 
+#------------------------------------------------------------------------------------- #
+```{r setup}
+
+all_spp <-  species_hs %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (all_spp)
+
+unique (all_spp$loiczid) %>% length()#168700
+
+unique (all_spp$n_spp) %>% length()#3696
+
+allspecies_map <- subs (basemap, all_spp, by= "loiczid", which= "n_spp")
+
+plot (allspecies_map)
+
+writeRaster(allspecies_map, "allspecies_map", format = "GTiff")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF demerspelag TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+```{r setup}
+all_demerspelag <- species_hs %>%
+  group_by (loiczid)%>%
+  summarize(n_distinct(demerspelag))
+
+head (all_demerspelag)
+
+all_demerspelag_map <- subs (basemap, all_demerspelag, by= "loiczid", which= "n_distinct(demerspelag)")
+plot (all_demerspelag_map, col=colorRampPalette(c("red", "blue", "green"))(3))
+legend("topright", legend = c("1", "2", "3"), fill = colorRampPalette(c("red", "blue", "green"))(3))
+
+summary (species_hs$demerspelag)
+
+writeRaster(all_demerspelag, "all_demerspelag", format = "GTiff")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF EnvTemp TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+```{r setup}
+all_EnvTemp <- species_hs %>%
+  group_by (loiczid)%>%
+  summarize(n_distinct(EnvTemp))
+
+head (all_EnvTemp)
+
+all_EnvTemp_map <- subs (basemap, all_EnvTemp, by= "loiczid", which= "n_distinct(EnvTemp)")
+plot (all_EnvTemp_map, col=rainbow(6))
+legend("topright", legend = c("6", "5", "4", "3", "2", "1"), fill = rev(rainbow(6)))
+
+summary (species_hs$EnvTemp)
+#boreal  deep-water       polar subtropical   temperate    tropical 
+#     114230    37169656      614062     7511610     2258710    13392189
+
+writeRaster(all_EnvTemp, "all_EnvTemp", format = "GTiff")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF Loo TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+```{r setup}
+#Summarize Loo
+summary (species_hs$Loo)
+
+#Create 4 different group intervals
+species_hs$Loo_groups<-cut(species_hs$Loo, c(0,25,50,100,1500), labels=c(1:4))
+species_hs$Loogroups<-cut(species_hs$Loo, c(0,25,50,100,1500), labels=c("small", "medium", "large", "very_large"))
+
+head (species_hs)
+
+summary (species_hs$Loo_groups)
+#       1        2        3        4 
+#27838666 19657395  8540381  5024015 
+
+#save 
+#write.csv (species_hs , file = "species_hs.csv")
+
+#read 
+#species_hs <- read.csv('/home/valle/github_annex/species_hs.csv')
+
+as.tibble (species_hs)
+colnames(species_hs)
+
+asdf <- select (species_hs, c (loiczid, am_sid, Loogroups))
+head (asdf)
+
+all_Loo <- asdf %>%
+  group_by (loiczid)%>%
+  summarize(n_distinct(Loogroups))
+
+writeRaster(all_Loo, "all_Loo", format = "GTiff")
+```  
+  
+

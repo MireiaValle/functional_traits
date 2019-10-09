@@ -41,18 +41,19 @@ head (fis1)
 fis2<- traits_matrix[traits_matrix$am_sid == "Fis-25283",]
 head (fis2)
 
+#remove those species from the matrix
 traits_matrix_ok <- traits_matrix[-c(1937,3173), ]
 
 #we save the table
 write.csv (traits_matrix_ok, file = "traits_matrix.csv")
-```
 
+#load traits matrix
 traits_matrix <- read.csv ("traits_matrix.csv")
 
 as.tibble (traits_matrix)
 
 summary (traits_matrix)
-
+```
 SpecCode = SpecCode
 Species = Species
 sciname = sciname
@@ -96,7 +97,7 @@ BodyShapeI <fct>
 SexualAttributes <fct>
 SexMorphology <fct>
 TypeofEyes <fct>
-PosofMouth <fct>,
+PosofMouth <fct>
 TypeofMouth <fct>
 CaudalFinI <fct>
 CShape <fct>
@@ -127,8 +128,9 @@ temperature <dbl>
 
 
 #selected traits
-
+```{r setup}
 traits_selected <- subset(traits_matrix, select=c("SpecCode", "sciname", "am_sid", "genus", "species", "kingdom", "phylum", "class", "order", "family", "Loo", "K", "Winfinity", "tmax", "tm", "M", "Lm", "temperature",  "bodyshape", "demerspelag", "depthrangedeep", "vulnerability", "importance", "pricecateg", "pd50", "troph", "setrop", "FeedingType", "DietTroph", "DietSeTroph", "FoodTroph", "FoodSeTroph", "fecuntype", "fecun_min", "fecun_max", "OperculumPresent", "BodyShapeI", "SexualAttributes", "SexMorphology", "TypeofEyes", "PosofMouth", "TypeofMouth", "CaudalFinI", "CShape", "PelvicsAttributes", "IUCN_Code", "Protected", "EnvTemp", "Resilience", "AdultType", "AdultMode"))
 
 #we save the table
 write.csv (traits_selected, file = "traits_selected.csv")
+```
