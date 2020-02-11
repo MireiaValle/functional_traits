@@ -1,0 +1,763 @@
+---
+title: "7.1_Zoom to central america, caribbean and ecuador"
+author: "Mireia Valle"
+date: "10/11/2019"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#BUILDING A DATA FRAME WITH LOICZID VALUE EQUAL TO THE EXTENT WE ARE INTERESTED IN 
+##We first create the global map
+```{r, include = FALSE}
+
+basemap <- raster (ext= extent (c(-180,180, -90, 90)), res=0.5)
+values (basemap) <- 1:length (basemap)
+basemap
+plot (basemap)
+```
+##We then create a data frame with long, lat and loiczid columns
+```{r, include = FALSE}
+
+base_df <- rasterToPoints(basemap) %>%
+  as.data.frame() %>%
+  setNames(c('long', 'lat', 'loiczid')) %>%
+  mutate(loiczid = as.integer(loiczid))
+```
+##We filter the data frame to the extent we are interested in: (ext= extent (c(-95,-85, -3, 13))
+```{r setup}
+zoom_base_df1 <- filter(base_df, between(base_df$long, -95, -80))
+zoom_base_df <- filter(zoom_base_df1, between(zoom_base_df1$lat, -3, 13))
+```
+##We remove the first filtered dataframe
+```{r setup}
+rm(zoom_base_df1)
+```
+##We look at our new zoomed data frame
+```{r setup}
+head (zoom_base_df)
+summary (zoom_base_df$loiczid)
+unique (zoom_base_df$loiczid) %>% length ()#960
+summary (zoom_base_df$lat)
+summary (zoom_base_df$long)
+```
+##We create a vector with loiczid values for the extent we are interested in
+```{r setup}
+zoom_loiczid<- zoom_base_df$loiczid
+```
+##We filter "species_hs" dataframe in order to get whole information about the different species that are located in the are we have selected
+```{r setup}
+#species_hs <- run 7_Mapping traits.Rmd from line 38 to line 76
+head (species_hs)
+```
+##We filter the spcies_hs dataframe by the loiczid that we want to analyse
+```{r setup}
+zoom_species_hs <- filter (species_hs, species_hs$loiczid %in% zoom_loiczid)
+unique (zoom_species_hs$loiczid) %>% length() #928
+unique (zoom_species_hs$am_sid) %>% length()#3780
+head (zoom_species_hs)
+colnames (zoom_species_hs)
+str (zoom_species_hs)
+```
+##Filter is keeping all levels so, we create a new dataframe to avoid that
+```{r setup, include=FALSE}
+zoom_species_hs_ok<-as.data.frame( matrix(NA, nrow(zoom_species_hs), ncol(zoom_species_hs), 
+                  dimnames=list( row.names(zoom_species_hs), names(zoom_species_hs) ) ) ) 
+#am_sid
+zoom_species_hs_ok [,"am_sid"]<-as.character(zoom_species_hs [,"am_sid"])
+zoom_species_hs_ok[,"am_sid"]<-factor(zoom_species_hs_ok[,"am_sid"], ordered = TRUE)
+#loiczid
+zoom_species_hs_ok [,"loiczid"]<-as.integer(zoom_species_hs [,"loiczid"])
+#prob
+zoom_species_hs_ok[,"prob"]<-as.numeric(zoom_species_hs[,"prob"] )
+#class
+zoom_species_hs_ok [,"class"]<-as.character(zoom_species_hs [,"class"])
+zoom_species_hs_ok[,"class"]<-factor(zoom_species_hs_ok[,"class"], ordered = TRUE)
+#order
+zoom_species_hs_ok [,"order"]<-as.character(zoom_species_hs [,"order"])
+zoom_species_hs_ok[,"order"]<-factor(zoom_species_hs_ok[,"order"], ordered = TRUE)
+#family
+zoom_species_hs_ok [,"family"]<-as.character(zoom_species_hs [,"family"])
+zoom_species_hs_ok[,"family"]<-factor(zoom_species_hs_ok[,"family"], ordered = TRUE)
+#Loo
+zoom_species_hs_ok[,"Loo"]<-as.numeric( zoom_species_hs[,"Loo"] )
+#K
+zoom_species_hs_ok[,"K"]<-as.numeric( zoom_species_hs[,"K"] )
+#Winfinity
+zoom_species_hs_ok[,"Winfinity"]<-as.numeric( zoom_species_hs[,"Winfinity"] )
+#tmax
+zoom_species_hs_ok[,"tmax"]<-as.numeric( zoom_species_hs[,"tmax"] )
+#tm
+zoom_species_hs_ok[,"tm"]<-as.numeric( zoom_species_hs[,"tm"] )
+#M
+zoom_species_hs_ok[,"M"]<-as.numeric( zoom_species_hs[,"M"] )
+#Lm
+zoom_species_hs_ok[,"Lm"]<-as.numeric( zoom_species_hs[,"Lm"] )
+#depthrangedeep
+zoom_species_hs_ok[,"depthrangedeep"]<-as.numeric( zoom_species_hs[,"depthrangedeep"] )
+#demerspelag  
+zoom_species_hs_ok [,"demerspelag"]<-as.character(zoom_species_hs [,"demerspelag"])
+zoom_species_hs_ok[,"demerspelag"]<-factor(zoom_species_hs_ok[,"demerspelag"], ordered = TRUE)
+#EnvTemp       
+zoom_species_hs_ok [,"EnvTemp"]<-as.character(zoom_species_hs [,"EnvTemp"])
+zoom_species_hs_ok[,"EnvTemp"]<-factor(zoom_species_hs_ok[,"EnvTemp"], ordered = TRUE)
+#FeedingType   
+zoom_species_hs_ok [,"FeedingType"]<-as.character(zoom_species_hs [,"FeedingType"])
+zoom_species_hs_ok[,"FeedingType"]<-factor(zoom_species_hs_ok[,"FeedingType"], ordered = TRUE)
+#bodyshape     
+zoom_species_hs_ok [,"bodyshape"]<-as.character(zoom_species_hs [,"bodyshape"])
+#we rename the levels into new categories names
+table (zoom_species_hs_ok$bodyshape)
+
+#zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="eel-like"),"bodyshape"]<-"eel_like"
+#zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="elongated"),"bodyshape"]<-"elongated"
+#zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"fusiform_normal"
+#zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"short_andor_deep"
+#zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="other"),"bodyshape"]<-"other"
+
+#zoom_species_hs_ok[,"bodyshape"]<-factor(zoom_species_hs_ok[,"bodyshape"], levels=c("eel_like", "elongated", "fusiform_normal", "short_andor_deep", "other" ), ordered = TRUE )
+
+#we rename into numbers
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="eel-like"),"bodyshape"]<-"1"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="elongated"),"bodyshape"]<-"2"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"3"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"4"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="other"),"bodyshape"]<-"5"
+
+zoom_species_hs_ok[,"bodyshape"]<-factor(zoom_species_hs_ok[,"bodyshape"], levels=c("1", "2", "3", "4", "5" ), ordered = TRUE )
+table (zoom_species_hs_ok$bodyshape)
+
+#IUCN_Code     
+zoom_species_hs_ok [,"IUCN_Code"]<-as.character(zoom_species_hs [,"IUCN_Code"])
+zoom_species_hs_ok[,"IUCN_Code"]<-factor(zoom_species_hs_ok[,"IUCN_Code"], ordered = TRUE)
+#Resilience    
+zoom_species_hs_ok [,"Resilience"]<-as.character(zoom_species_hs [,"Resilience"])
+zoom_species_hs_ok[,"Resilience"]<-factor(zoom_species_hs_ok[,"Resilience"], ordered = TRUE)
+#pd50          
+zoom_species_hs_ok[,"pd50"]<-as.numeric( zoom_species_hs[,"pd50"] ) 
+#vulnerability 
+zoom_species_hs_ok[,"vulnerability"]<-as.numeric( zoom_species_hs[,"vulnerability"] ) 
+#importance    
+zoom_species_hs_ok [,"importance"]<-as.character(zoom_species_hs [,"importance"])
+zoom_species_hs_ok[,"importance"]<-factor(zoom_species_hs_ok[,"importance"], ordered = TRUE) 
+#pricecateg    
+zoom_species_hs_ok [,"pricecateg"]<-as.character(zoom_species_hs [,"pricecateg"])
+zoom_species_hs_ok[,"pricecateg"]<-factor(zoom_species_hs_ok[,"pricecateg"], ordered = TRUE)
+
+str (zoom_species_hs_ok)
+
+```
+##We remove the original data filtered dataset
+```{r setup}
+rm (zoom_species_hs)
+```
+##We create a subset of the zoom_species_hs_ok in order to create the assemblage matrix (loiczid/spps probability)
+```{r setup}
+zoom_species_hs_subset <- subset(zoom_species_hs_ok , select=c("am_sid", "loiczid","prob"))
+
+head (zoom_species_hs_subset)
+as.tibble (zoom_species_hs_subset)
+
+unique (zoom_species_hs_subset$am_sid) %>% length()#3780
+
+#we spread the data
+zoom_spread_loiczid_spp <- zoom_species_hs_subset %>%
+    spread(am_sid, prob, fill = 0)
+
+as.tibble (zoom_spread_loiczid_spp)
+#we save the data
+#write.csv (zoom_spread_loiczid_spp, file = "zoom_assemblage.csv")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF ALL SPECIES IN THE SELECTED EXTEND (3799 spp)
+#------------------------------------------------------------------------------------- #
+```{r setup}
+zoom_spp <-  zoom_species_hs_ok %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (zoom_spp)
+```
+##We create the zoom map
+```{r setup}
+zoom_basemap <- raster (ext= extent (c(-95,-80, -3, 13)), res=0.5)
+values (zoom_basemap) <- zoom_loiczid
+plot (zoom_basemap)
+
+zoom_spp_map <- subs (zoom_basemap, zoom_spp, by= "loiczid", which= "n_spp")
+
+plot (zoom_spp_map)
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF demerspelag TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+```{r setup}
+zoom_demerspelag <- zoom_species_hs_ok %>%
+  group_by (loiczid)%>%
+  summarize(n_distinct(demerspelag))
+
+head (zoom_demerspelag)
+
+zoom_demerspelag_map <- subs (zoom_basemap, zoom_demerspelag, by= "loiczid", which= "n_distinct(demerspelag)")
+plot (zoom_demerspelag_map)
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF EnvTemp TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+```{r setup}
+zoom_EnvTemp <- zoom_species_hs_ok %>%
+  group_by (loiczid)%>%
+  summarize(n_distinct(EnvTemp))
+
+head (zoom_EnvTemp)
+
+zoom_EnvTemp_map <- subs (zoom_basemap, zoom_EnvTemp, by= "loiczid", which= "n_distinct(EnvTemp)")
+plot (zoom_EnvTemp_map, col=rainbow(6))
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF Loo TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+```{r setup}
+#Summarize Loo
+summary (zoom_species_hs_ok$Loo)
+
+#Create 4 different group intervals
+zoom_species_hs_ok$Loo_groups<-cut(zoom_species_hs_ok$Loo, c(0,25,50,100,1500), labels=c("1", "2", "3", "4"))
+
+head (zoom_species_hs_ok)
+
+summary (zoom_species_hs_ok$Loo_groups)
+
+zoom_Loo <- zoom_species_hs_ok %>%
+  group_by (loiczid)%>%
+  summarize(n_distinct(Loo_groups))
+
+zoom_Loo_map <- subs (zoom_basemap, zoom_Loo, by= "loiczid", which= "n_distinct(Loo_groups)")
+plot (zoom_Loo_map, col=rainbow(4))
+
+```  
+
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF BODYSHAPE TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+
+zoom_bodyshape_pct <- zoom_species_hs_ok %>%
+  group_by (loiczid)%>%
+  summarize(n_tot = n(), 
+  eel_pct = (sum(bodyshape==1, na.rm = TRUE)/n_tot)*100,
+  elon_pct = (sum(bodyshape==2, na.rm = TRUE)/n_tot)*100,
+  fusi_pct = (sum(bodyshape==3, na.rm = TRUE)/n_tot)*100,
+  short_pct = (sum(bodyshape==4, na.rm = TRUE)/n_tot)*100,
+  other_pct = (sum(bodyshape==5, na.rm = TRUE)/n_tot)*100,
+  n_dist = n_distinct(bodyshape[!is.na(bodyshape)]))
+
+head (zoom_bodyshape_pct)
+
+par(mfrow=c(2,3))
+eel_map <- subs (zoom_basemap, zoom_bodyshape_pct, by= "loiczid", which= "eel_pct")
+elon_map <- subs (zoom_basemap, zoom_bodyshape_pct, by= "loiczid", which= "elon_pct")
+fusi_map <- subs (zoom_basemap, zoom_bodyshape_pct, by= "loiczid", which= "fusi_pct")
+short_map <- subs (zoom_basemap, zoom_bodyshape_pct, by= "loiczid", which= "short_pct")
+other_map <- subs (zoom_basemap, zoom_bodyshape_pct, by= "loiczid", which= "other_pct")
+dist_map <- subs (zoom_basemap, zoom_bodyshape_pct, by= "loiczid", which= "n_dist")
+
+table (zoom_bodyshape_pct$n_dist)
+
+par(mfrow=c(2,3))
+
+plot (eel_map,
+      main="proportion of eel-like bodyshape spp",
+      axes=FALSE, zlim=c(0,100), col=rainbow(5))
+plot (elon_map,
+      main="proportion of elongated bodyshape spp",
+      axes=FALSE, zlim=c(0,100), col=rainbow(5))
+plot (fusi_map,
+      main="proportion of fusiform/normal bodyshape spp",
+      axes=FALSE, zlim=c(0,100), col=rainbow(5))
+plot (short_map,
+      main="proportion of short and or deep bodyshape spp",
+      axes=FALSE, zlim=c(0,100), col=rainbow(5))      
+plot (other_map,
+      main="proportion of other bodyshape spp",
+      axes=FALSE, zlim=c(0,100), col=rainbow(5))
+plot (dist_map,
+      main="distinct bodyshape",
+      axes=FALSE, col=rainbow(5))
+
+#------------------------------------------------------------------------------------- #
+#FUNCTIONAL DIVERSITY CALCULATIONS 
+# sourcing "homemade" R functions by Sebastien Villeger (http://villeger.sebastien.free.fr/Rscripts.html)
+#------------------------------------------------------------------------------------- #
+#Preparing the data
+# importing species raw trait values from a csv file: row names are in the column named 'am_sid'
+traits_FD<-read.csv("/home/valle/github_annex/traits_FD_ok.csv", header=T)
+head (traits_FD)
+colnames(traits_FD)[colnames(traits_FD)=="X"] <- "am_sid"
+head (traits_FD)
+#we create a vector that conatins the species that are present in the selected extent
+zoom_spp_list <- unique (zoom_species_hs_ok$am_sid) 
+#Filter to select only the species that are present in the selected extent
+zoom_traits <- filter (traits_FD, traits_FD$am_sid %in% zoom_spp_list)
+unique (zoom_traits$am_sid) %>% length()#3780
+head (zoom_traits)
+colnames (zoom_traits)
+str (zoom_traits)
+##Filter is keeping all levels so, we create a new dataframe to avoid that
+```{r setup, include=FALSE}
+zoom_traits_ok<-as.data.frame( matrix(NA, nrow(zoom_traits), ncol(zoom_traits), 
+                  dimnames=list( row.names(zoom_traits), names(zoom_traits) ) ) ) 
+#am_sid
+zoom_traits_ok [,"am_sid"]<-as.character(zoom_traits [,"am_sid"])
+zoom_traits_ok[,"am_sid"]<-factor(zoom_traits_ok[,"am_sid"], ordered = TRUE)
+#class
+zoom_traits_ok [,"class"]<-as.character(zoom_traits [,"class"])
+zoom_traits_ok[,"class"]<-factor(zoom_traits_ok[,"class"], ordered = TRUE)
+#order
+zoom_traits_ok [,"order"]<-as.character(zoom_traits [,"order"])
+zoom_traits_ok[,"order"]<-factor(zoom_traits_ok[,"order"], ordered = TRUE)
+#family
+zoom_traits_ok [,"family"]<-as.character(zoom_traits [,"family"])
+zoom_traits_ok[,"family"]<-factor(zoom_traits_ok[,"family"], ordered = TRUE)
+#Loo
+zoom_traits_ok[,"Loo"]<-as.numeric( zoom_traits[,"Loo"] )
+#K
+zoom_traits_ok[,"K"]<-as.numeric( zoom_traits[,"K"] )
+#Winfinity
+zoom_traits_ok[,"Winfinity"]<-as.numeric( zoom_traits[,"Winfinity"] )
+#tmax
+zoom_traits_ok[,"tmax"]<-as.numeric( zoom_traits[,"tmax"] )
+#tm
+zoom_traits_ok[,"tm"]<-as.numeric( zoom_traits[,"tm"] )
+#M
+zoom_traits_ok[,"M"]<-as.numeric( zoom_traits[,"M"] )
+#Lm
+zoom_traits_ok[,"Lm"]<-as.numeric( zoom_traits[,"Lm"] )
+#depthrangedeep
+zoom_traits_ok[,"depthrangedeep"]<-as.numeric( zoom_traits[,"depthrangedeep"] )
+#demerspelag  
+zoom_traits_ok [,"demerspelag"]<-as.character(zoom_traits [,"demerspelag"])
+zoom_traits_ok[,"demerspelag"]<-factor(zoom_traits_ok[,"demerspelag"], ordered = TRUE)
+table (zoom_traits_ok$demerspelag)
+#demersal               pelagic             reef-associated 
+#           1260            1036            1484 
+#EnvTemp       
+zoom_traits_ok [,"EnvTemp"]<-as.character(zoom_traits [,"EnvTemp"])
+zoom_traits_ok[,"EnvTemp"]<-factor(zoom_traits_ok[,"EnvTemp"], ordered = TRUE)
+table (zoom_traits_ok$EnvTemp)
+#     boreal  deep-water       polar subtropical   temperate    tropical 
+#          1        1074           1         656          59        1989 
+#FeedingType   
+zoom_traits_ok [,"FeedingType"]<-as.character(zoom_traits [,"FeedingType"])
+zoom_traits_ok[,"FeedingType"]<-factor(zoom_traits_ok[,"FeedingType"], ordered = TRUE)
+table (zoom_traits_ok$FeedingType)
+
+#bodyshape     
+zoom_traits_ok [,"bodyshape"]<-as.character(zoom_traits [,"bodyshape"])
+table (zoom_traits_ok$bodyshape)
+#we rename the levels into new categories names
+zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="eel-like"),"bodyshape"]<-"eel_like"
+zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="elongated"),"bodyshape"]<-"elongated"
+zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"fusiform_normal"
+zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"short_andor_deep"
+zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="other"),"bodyshape"]<-"other"
+
+table (zoom_traits_ok$bodyshape)
+
+zoom_traits_ok[,"bodyshape"]<-factor(zoom_traits_ok[,"bodyshape"], levels=c("eel_like", "elongated", "fusiform_normal", "short_andor_deep", "other" ), ordered = TRUE )
+
+#we rename into numbers
+#zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="eel-like"),"bodyshape"]<-"1"
+#zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="elongated"),"bodyshape"]<-"2"
+#zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"3"
+#zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"4"
+#zoom_traits_ok[which(zoom_traits_ok[,"bodyshape"]=="other"),"bodyshape"]<-"5"
+
+#zoom_traits_ok[,"bodyshape"]<-factor(zoom_traits_ok[,"bodyshape"], levels=c("1", "2", "3", "4", "5" ), ordered = TRUE )
+table (zoom_traits_ok$bodyshape)
+
+#IUCN_Code     
+zoom_traits_ok [,"IUCN_Code"]<-as.character(zoom_traits [,"IUCN_Code"])
+zoom_traits_ok[,"IUCN_Code"]<-factor(zoom_traits_ok[,"IUCN_Code"], ordered = TRUE)
+#Resilience    
+zoom_traits_ok [,"Resilience"]<-as.character(zoom_traits [,"Resilience"])
+zoom_traits_ok[,"Resilience"]<-factor(zoom_traits_ok[,"Resilience"], ordered = TRUE)
+#pd50          
+zoom_traits_ok[,"pd50"]<-as.numeric( zoom_traits[,"pd50"] ) 
+#vulnerability 
+zoom_traits_ok[,"vulnerability"]<-as.numeric( zoom_traits[,"vulnerability"] ) 
+#importance    
+zoom_traits_ok [,"importance"]<-as.character(zoom_traits [,"importance"])
+zoom_traits_ok[,"importance"]<-factor(zoom_traits_ok[,"importance"], ordered = TRUE) 
+#pricecateg    
+zoom_traits_ok [,"pricecateg"]<-as.character(zoom_traits [,"pricecateg"])
+zoom_traits_ok[,"pricecateg"]<-factor(zoom_traits_ok[,"pricecateg"], ordered = TRUE)
+
+str (zoom_traits_ok)
+#we save the data
+write.csv (zoom_traits_ok, file = "zoom_traits_ok.csv")
+
+zoom_traits_ok<-read.csv("/home/valle/github_annex/zoom_traits_ok.csv", header=T, row.names = "am_sid")
+
+head (zoom_traits_ok)
+zoom_traits_ok$X <- NULL 
+head (zoom_traits_ok)
+
+#reading assemblage matrix
+#zoom_assemblage <- read.csv('/home/valle/github_annex/"zoom_assemblage.csv')
+zoom_assemblage <- zoom_spread_loiczid_spp
+zoom_assemblage_ok <- column_to_rownames(zoom_assemblage, var = "loiczid")
+
+#save the data
+write.csv (zoom_assemblage_ok, file = "zoom_assemblage_ok.csv")
+
+as.tibble (zoom_assemblage_ok)
+
+# checking that species names are the same in the two matrices
+
+sum(row.names(zoom_traits_ok) %in% colnames(zoom_assemblage_ok)) == ncol(zoom_assemblage_ok)
+
+colnames (zoom_traits_ok)
+#looking for correlations
+install.packages ("corrplot")
+library (corrplot)
+cordb <- zoom_traits_ok %>% 
+  select(-IUCN_Code, -Resilience, -vulnerability, -importance, -pricecateg, -demerspelag, -EnvTemp, -FeedingType, -class, -order, -family)
+summary (cordb)
+cordb_na <- drop_na(cordb) 
+cor <- cor(cordb_na)
+b <- corplot <- corrplot(cor,
+                     type = "lower",
+                     method = "ellipse",
+                     diag = F,
+                     outline = T,
+                     tl.col = "black",
+                    #tl.srt = 0,
+                     cl.pos = "r",
+                     cl.cex = 1,
+                     cl.ratio = 0.5)
+
+p.mat <- cor.mtest(cordb )$p
+
+head(p.mat[, 1:9])
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+a <- corrplot(cor, method = "color", col = col(200),
+         type = "upper", order = "hclust", number.cex = .7,
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col = "black", tl.srt = 90, # Text label color and rotation
+         # Combine with significance
+         p.mat = p.mat, sig.level = 0.01, insig = "blank", 
+         # hide correlation coefficient on the principal diagonal
+         diag = FALSE)
+
+# species names and codes (for graphics)
+species_names<-row.names(zoom_traits_ok)
+species_codes<-species_names
+length(unique(species_codes))==length(species_names) # OK
+
+
+# setting working directory
+#Desde MAZU:
+my_path<-"/home/valle/github/Tutorial_FD" 
+#  <= PUT direction of the folder where you saved the zipfile containing functions and data
+#Desde mi portatil
+#my_path<-"N:/github/Tutorial_FD"
+# loading functions
+setwd( paste(my_path,"/functions", sep="") ) # folder where R functions have been saved
+source("quality_funct_space.R")
+source("plot_funct_space.R")
+source("multidimFD.R")
+source("multidimFbetaD.R")
+
+# FUNCTIONAL SPACE
+
+setwd( paste(my_path,"/FutureSeaResults/plot_funct_space", sep="") )  # setting working directory for results
+
+# computing all functional spaces based on dendrogram or PCoA (up to 10 axes)
+# NOTE: you need to be connected to internet for a correct functioning of quality_funct_space function
+
+install.packages ("ape")
+install.packages("clue")
+install.packages("cluster")
+install.packages("geometry")
+install.packages("gtools")
+
+#remove those traits that contain NAs and those traits 
+summary (zoom_traits_ok)
+zoom_traits_ok_NA <- select (zoom_traits_ok, -"FeedingType", -"bodyshape", -"Resilience", -"pd50", -"depthrangedeep", -"importance", -"pricecateg", -"IUCN_Code", -"vulnerability", -"EnvTemp")
+summary (zoom_traits_ok_NA)
+
+zoom_traits_ok_NA_clear <- select (zoom_traits_ok_NA, -"class", -"order", -"family")
+summary (zoom_traits_ok_NA_clear)
+
+#we save the data
+write.csv (zoom_traits_ok_NA_clear, file = "zoom_traits_ok_NA_clear.csv")
+
+qual_funct_space_clear<-quality_funct_space(zoom_traits_ok_NA_clear, traits_weights=NULL, nbdim=10, metric="Gower", dendro=TRUE, plot="quality_funct_space_MarineFish_clear")
+
+qual_funct_space_clear$meanSD # => best space has 5 dimensions + have a look to the "quality_funct_space_MarineFish.jpeg" file in the /results folder
+# mean Squared-Deviation of 0.0029 means that average deviation between Euclidean distance and Gower's distance is of (0.0024)^0.5=0.049, so it can be seen like an average error of 5%
+
+# species coordinates in the best space
+coord_fish_4D<-qual_funct_space_clear$details_funct_space$mat_coord[,1:4]
+
+################################# HASTA AQUÍ CON LA EXTENT NUEVA
+# few examples of how exploring functional space
+
+# plot of 5D functional space => look to the jpeg file in the ".../results/plot_funct_space" folder
+plot_funct_space( coord_fish_4D,col_sp="blue", pch_sp=21, nm_jpeg="Fspace_fish_4D.jpeg", cex_sp=1.6, close_jpeg=TRUE   )
+
+# looking at position of all species in the 4D space
+plot_funct_space( coord_fish_5D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.58,0.48), col_sp="blue", pch_sp=species_codes, nm_jpeg="Fspace_fish_codes_12.jpeg", cex_sp=0.6, close_jpeg=TRUE   )
+plot_funct_space( coord_fish_5D, Faxes=c( "PC3","PC4"), Faxes_lim=c(-0.58,0.48), col_sp="blue", pch_sp=species_codes, nm_jpeg="Fspace_fish_codes_34.jpeg", cex_sp=0.6, close_jpeg=TRUE   )
+
+# looking at position of 3 particular species on the 2 first PC axes
+plot_funct_space( coord_fish_5D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.55,0.45), col_sp="grey50", pch_sp="+", nm_jpeg="Fspace_fish_12_3species.jpeg", cex_sp=0.6, close_jpeg=FALSE   ) # all species plotted with crosses, not closing the jpeg
+text(coord_fish_5D[c("Fis-30583","Fis-62376","Fis-23064"),1:2], c("Fis-30583","Fis-62376","Fis-23064"), cex=0.8, col="red3" ) # adding species codes for only 3 species
+graphics.off() # closing the jpeg
+
+# looking at distribution of values for one trait in the functional space
+plot_funct_space( coord_fish_5D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.6,0.6), col_sp=as.factor(zoom_traits_ok_NA[,"demerspelag"]), pch_sp=21, nm_jpeg="Fspace_fish_12_demerspelag.jpeg", cex_sp=0.6, close_jpeg=FALSE   ) # points color defined according to values of this categorical trait, not closing the jpeg
+plot(0:7,0:7,type="n", axes=F,xlab="", ylab="") # empty plot for legend on the right panel
+points(rep(1.8,7), 1:7, pch=21, cex=1, bg=as.factor(levels(zoom_traits_ok_NA[,"demerspelag"])) ) 
+text(rep(2,7), 1:7, levels(zoom_traits_ok_NA[,"demerspelag"]), cex=1, adj=0 ) 
+graphics.off() # closing the jpeg
+
+# looking at distribution of values for one trait in the functional space
+plot_funct_space( coord_fish_5D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.6,0.6), col_sp=as.factor(zoom_traits_ok_NA[,"EnvTemp"]), pch_sp=21, nm_jpeg="Fspace_fish_12_EnvTemp.jpeg", cex_sp=0.6, close_jpeg=FALSE   ) # points color defined according to values of this categorical trait, not closing the jpeg
+plot(0:6,0:6,type="n", axes=F,xlab="", ylab="") # empty plot for legend on the right panel
+points(rep(1.8,6), 1:6, pch=21, cex=1, bg=as.factor(levels(zoom_traits_ok_NA[,"EnvTemp"])) ) 
+text(rep(2,6), 1:6, levels(zoom_traits_ok_NA[,"EnvTemp"]), cex=1, adj=0 ) 
+graphics.off() # closing the jpeg
+
+# looking at distribution of values for one trait in the functional space
+plot_funct_space( coord_fish_5D, Faxes=c( "PC1","PC2"), Faxes_lim=c(-0.6,0.6), col_sp=as.factor(zoom_traits_ok_NA[,"class"]), pch_sp=21, nm_jpeg="Fspace_fish_12_class.jpeg", cex_sp=0.6, close_jpeg=FALSE   ) # points color defined according to values of this categorical trait, not closing the jpeg
+plot(0:6,0:6,type="n", axes=F,xlab="", ylab="") # empty plot for legend on the right panel
+points(rep(1.8,4), 1:4, pch=21, cex=1, bg=as.factor(levels(zoom_traits_ok_NA[,"class"])) ) 
+text(rep(2,4), 1:4, levels(zoom_traits_ok_NA[,"class"]), cex=1, adj=0 ) 
+graphics.off() # closing the jpeg
+
+##############################################################################################
+# illustration of bias induced by functional dendrogram or space of low dimensionality
+
+# functional differences between "Fis-30583","Fis-62376","Fis-23064"
+
+# trait values
+zoom_traits_ok_NA[c("Fis-30583","Fis-62376","Fis-23064"),]
+
+# raw distance based on traits values 
+round(as.matrix(qual_funct_space$details_funct_space$mat_dissim)[c("Fis-30583","Fis-62376","Fis-23064"),c("Fis-30583","Fis-62376","Fis-23064")],3)
+# => Fis-30583 is almost >2 times closer to Fis-23064 than to Fis-62376
+
+##################################
+# plot of best functional dendrogram
+plot(qual_funct_space_clear$details_funct_space$best_tree, sub="", main="UPGMA", xlab="", h=-1)
+# look at position of Fis-30583 on the tree
+
+# cophenetic distance on best dendrogram 
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$t_UPGMA)[c("Fis-30583","Fis-62376","Fis-23064"),c("Fis-30583","Fis-62376","Fis-23064")],3) 
+# Fis-30583 as far to Fis-23064 than to Fis-62376 => dendrogram overestimates distance between some pairs of species actually close
+
+# most extreme species is the Fis-62376
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$t_UPGMA)["Fis-62376",],2) 
+
+
+round( as.matrix(qual_funct_space$details_funct_space$mat_dissim)["Fis-62376",],2)
+
+# correlation between distance on the dendrogram vs Gower distance for pairs between Fis-62376 and other fish
+plot( x=as.matrix(qual_funct_space$details_funct_space$mat_dissim)["Fis-62376",], y=as.matrix(qual_funct_space$details_funct_space$dist_raw$t_UPGMA)["Fis-62376",], xlab="Gower Dist on trait values", ylab="Dist on UPGMA dendro", pch=16, cex=0.7  )
+# no strong correlation : 2 horizontal lines of points with the points close to y=0.4 corresponding to pineapple vs ( banana, litchi or mango)
+# and the points at y=0.56 corresponding to distance between pineapple and all other fish
+# => dendrogram overestimates some distances and homogenize them (lower variability than with Gower distance)
+
+######hasta aquí
+
+
+##################################
+# distance in the 2D space 
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$m_2D)[c("cherry","lime","lemon"),c("cherry","lime","lemon")],3)
+# lime 2.4 times closer to lemon than to cherry (instead of 3 based on trait values)
+# => look at position of these 3 species on PC1-PC2 on "Fspace_fish_codes_12.jpeg", cherry is not that far from both Citrus species
+
+##################################
+# distance in the 5D space 
+round(as.matrix(qual_funct_space$details_funct_space$dist_raw$m_5D)[c("cherry","lime","lemon"),c("cherry","lime","lemon")],3)
+# lime 2.4 times closer to lemon than to cherry
+# => look at position of these 3 species on PC3-PC4 on "Fspace_fish_5D.jpeg", cherry is far from both Citrus species
+
+# correlation between distance in the 5D space vs Gower distance for pairs between pineapple and other fish
+plot( x=as.matrix(qual_funct_space$details_funct_space$mat_dissim)["pineapple",], y=as.matrix(qual_funct_space$details_funct_space$dist_raw$m_5D)["pineapple",], xlab="Gower Dist on trait values", ylab="Dist in 5D space", pch=16, cex=0.7  )
+# strong correlation between Euclidean distance in the 5D space and Gower distance => no overestimation, no homogenization
+
+##############################################################################################
+##############################################################################################
+
+# MULTIDIMENSIONAL FUNCTIONAL DIVERISTY INDICES
+
+# computing Functional diversity indices with plots of FD indices put in a subfolder named plot_FD
+as.tibble (zoom_assemblage_ok)
+zoom_assemblage_ok_100 <- zoom_assemblage_ok*100
+matrix_zoom_assemblage_ok_100 <- data.matrix(zoom_assemblage_ok_100)
+
+FD_assemblages<-multidimFD(coord_fish_5D, matrix_zoom_assemblage_ok_100 , check_species_pool=TRUE, verb=TRUE,
+                      nm_asb_plot=row.names(matrix_zoom_assemblage_ok_100), folder_plot= paste(my_path,"/results/plot_FD", sep=""),
+                      Faxes_plot=colnames(coord_fish_5D)[1:4], Faxes_nm_plot=colnames(coord_fish_5D)[1:4],
+                      plot_pool=TRUE, col_bg="grey90", col_sp_pool="grey30",  pch_sp_pool="+", cex_sp_pool=1, 
+                      pch_sp=21, col_sp="#1E90FF", transp=50 )
+
+# printing results = rounded FD indices values
+round(FD_assemblages,3)
+
+#plotting results
+
+rich_fd <- subset (FD_assemblages, select=c("Nb_sp", "FRic", "FDiv", "FEve", "FDis", "FSpe", "FOri"))
+rich_fd <- as.data.frame(rich_fd )
+
+#FRic=Functional richness = convex hull volume
+
+ggplot(rich_fd, aes(x =Nb_sp, y = FRic )) +
+  geom_point()
+
+#FDiv=Functional Divergence
+
+ggplot(rich_fd, aes(x =Nb_sp, y = FDiv)) +
+  geom_point()
+
+#FEve=Functional Evenness
+
+ggplot(rich_fd, aes(x =Nb_sp, y = FEve)) +
+  geom_point()
+
+#FDis=Functional Dispersion: abundance-weighted mean distance to abundance-weighted centroid scaled by maximum value possible given species pool (i.e. the two most distant species have half of total weight)
+
+ggplot(rich_fd, aes(x =Nb_sp, y = FDis, na.rm = TRUE)) +
+  geom_point()
+
+#FSpe=Functional Specialization: abundance-weighted mean distance to centroid of the global pool of species scaled by maximum value possible given species pool (i.e. an assmeblage hosting only the most specialized species)
+
+ggplot(rich_fd, aes(x =Nb_sp, y = FSpe)) +
+  geom_point()
+
+#FOri=Functional Originality : abundance-weighted mean distance to nearest neighbour in the global pool of species scaled by maximum value possible given species pool (i.e. an assmeblage hosting only the most original species)
+ggplot(rich_fd, aes(x =Nb_sp, y = FOri)) +
+  geom_point()
+
+#categories for congruence calculations see Martín-Regalado et al 2019
+
+summary (rich_fd$Nb_sp)
+
+#selecting the category ranges manually: 
+#rich_fd$categoryNb_sp[rich_fd$Nb_sp < 500] <- "low"
+#rich_fd$categoryNb_sp[rich_fd$Nb_sp > 501 & rich_fd$Nb_sp < 1000] <- "middle"
+#rich_fd$categoryNb_sp[rich_fd$Nb_sp > 1001] <- "high"
+
+#selecting the category ranges by quantile:
+xs<-quantile(rich_fd$Nb_sp,c(0,1/3,2/3,1))
+xs[1]<- xs[1]-.00005
+df1 <- rich_fd %>% mutate(category=cut(Nb_sp, breaks=xs, labels=c("low","middle","high")))
+boxplot(df1$Nb_sp~df1$category,col=3:5)
+
+#selecting the category ranges by quantile:
+xsfd<-quantile(rich_fd$FRic,c(0,1/3,2/3,1),na.rm=TRUE)
+xsfd[1]<- xsfd[1]-.00005
+df2 <- df1 %>% mutate(category2=cut(FRic, breaks=xsfd, labels=c("low","middle","high")))
+boxplot(df2$FRic~df2$category2,col=3:5)
+
+#CALCULATING CONGRUENCE LEVEL
+
+#high if identical categories
+high if Nb_sp == high & FRic == high or Nb_sp == middle & FRic == middle or Nb_sp == low & FRic == low
+
+#moderate if contiguous
+moderate if Nb_sp == high & FRic == middle or Nb_sp == middle & FRic == high or Nb_sp == moderate & FRic == low or Nb_sp == low & FRic == moderate
+
+#low if extreme
+low if Nb_sp == high & FRic == low or Nb_sp == low & FRic == high 
+
+
+#FUNCIONAL DIvergency
+loiczid <- rownames(rich_fd)
+rich_fd <- cbind(loiczid=loiczid, rich_fd)
+
+zoom_FD_map <- subs (zoom_basemap, rich_fd, by= "loiczid", which= "FDiv")
+
+plot (zoom_FD_map, zlim=c(0.8,1), col=rainbow(5))
+
+#FUNCIONAL richness MAP
+
+zoom_FDric_map <- subs (zoom_basemap, rich_fd, by= "loiczid", which= "FRic")
+
+plot (zoom_FDric_map, zlim=c(0,1))
+
+
+zoom_spp2_map <- subs (zoom_basemap, rich_fd, by= "loiczid", which= "Nb_sp")
+plot (zoom_spp2_map)
+
+# look to the folder "../results/plot_FD"
+##############################################################################################
+# MULTIDIMENSIONAL FUNCTIONAL BETA DIVERISTY INDICES
+
+# occurences from species weights
+occ_fish_assemblages<-matrix_zoom_assemblage_ok_100
+occ_fish_assemblages[which(occ_fish_assemblages>0)]<-1
+
+# indices computation for all pairs of asssemblages, plot only on 3 first axes
+install.packages ("betapart")
+FbetaD_assemblages<-multidimFbetaD ( coord=coord_fish_5D,  occ=occ_fish_assemblages,  check_species_pool=FALSE, verb=TRUE,
+                  nm_asb_plot=row.names(occ_fish_assemblages) , folder_plot= paste(my_path,"/results/plot_FbetaD", sep="") , 
+                  Faxes_plot=colnames(coord_fish_5D)[1:3] , Faxes_nm_plot=colnames(coord_fish_5D)[1:3] )
+
+# printing results
+FbetaD_assemblages
+
+# look to the folder "../results/plot_FbetaD"
+
+##############################################################################################
+# saving R objects
+
+setwd( paste(my_path,"/results", sep="") ) # setting working directory for results
+
+save(qual_funct_space_clear, file="qual_funct_space_clear")
+
+
+save(zoom_traits_ok_NA, file="zoom_traits_ok_NA")
+save(species_codes, file="species_codes")
+
+save(coord_fish_5D, file="coord_fish_5D")
+save(FD_assemblages, file="FD_assemblages")
+
+save(weight_fish_baskets, file="weight_fish_baskets")
+save(FbetaD_baskets, file="FbetaD_baskets")
+
+##############################################################################################
+# Going one step further: example of how running a null model
+# here we want to test H0: Basket_4 results from a random sorting of species in the regional species pool (i.e. all species) given its species richness (SR). To keep the example simple, will focus only on FRic index so taking into account only species composition, not species weights.
+
+
+# picking assemblages of SR(basket_4) species at random among the 25 fish
+nbrep<-99 # number of replicates
+SR_basket_4<-FD_baskets["basket_4","Nb_sp"]
+SR_basket_4 # 8 species`
+
+# empty matrix to store simulated species occurences
+basket_4_H0<-matrix(0, nbrep, ncol(weight_fish_baskets), dimnames=list(1:nbrep, colnames(weight_fish_baskets) ) )
+for (k in 1:nbrep)
+{
+  basket_4_H0[k, sample(  colnames(weight_fish_baskets), SR_basket_4) ]<-1 # random sorting of species
+}# end of k
+
+# computing FD indices on these assemblages, check_species_pool=FALSE since by chance some species could be never picked but this is not an issue
+FD_basket_4_H0<-multidimFD(coord_fish_5D, basket_4_H0,  check_species_pool=FALSE )
+
+# comparing observed and expected values under H0 using SES and p-value metrics
+SES_FRic_basket_4<- (FD_baskets["basket_4","FRic"]-mean(FD_basket_4_H0[,"FRic"]) ) / sd(FD_basket_4_H0[,"FRic"])
+SES_FRic_basket_4 # SES<(-1) means that observed FRic is lower than expected
+  
+pvalue_FRic_basket_4<- length(which(FD_baskets["basket_4","FRic"]<=FD_basket_4_H0[,"FRic"]))/ ( length(FD_basket_4_H0[,"FRic"]) +1 )
+pvalue_FRic_basket_4 # p-value >0.975 => FRic is significantly lower than expected under H0
+
+
+##############################################################################################
+# END
+##############################################################################################

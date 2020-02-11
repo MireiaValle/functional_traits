@@ -318,7 +318,7 @@ head (species_loiczid)
 ```
 ##Read table
 ```{r}
-species_loiczid <- read.table ("species_loiczid.csv", head=TRUE, sep=',')
+species_loiczid <- read.table ("/home/valle/github_annex/species_loiczid", head=TRUE, sep=',')
 ```
 ##See head
 ```{r}

@@ -1,0 +1,445 @@
+---
+title: "1_preparing homemade dataset"
+author: "Mireia Valle"
+date: "12/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#BUILDING A DATA FRAME WITH LOICZID VALUE EQUAL TO THE EXTENT WE ARE INTERESTED IN 
+##We first create the global map
+```{r, include = FALSE}
+
+basemap <- raster (ext= extent (c(-180,180, -90, 90)), res=0.5)
+values (basemap) <- 1:length (basemap)
+basemap
+plot (basemap)
+```
+##We then create a data frame with long, lat and loiczid columns
+```{r, include = FALSE}
+
+base_df <- rasterToPoints(basemap) %>%
+  as.data.frame() %>%
+  setNames(c('long', 'lat', 'loiczid')) %>%
+  mutate(loiczid = as.integer(loiczid))
+
+head (base_df)
+```
+##We filter the data frame to the extent we are interested in: (ext= extent (c(-6,4, 36, 44))
+```{r setup}
+zoom_base_df1 <- filter(base_df, between(base_df$long, -10, 4))
+zoom_base_df <- filter(zoom_base_df1, between(zoom_base_df1$lat, 36, 44))
+```
+##We remove the first filtered dataframe
+```{r setup}
+rm(zoom_base_df1)
+```
+##We look at our new zoomed data frame
+```{r setup}
+head (zoom_base_df)
+str (zoom_base_df)
+unique (zoom_base_df$loiczid) %>% length ()#448
+summary (zoom_base_df$lat)
+summary (zoom_base_df$long)
+```
+##We create a vector with loiczid values for the extent we are interested in
+```{r setup}
+zoom_loiczid<- zoom_base_df$loiczid
+```
+##We filter "species_hs" dataframe in order to get whole information about the different species that are located in the are we have selected
+```{r setup}
+#species_hs <- run 7_Mapping traits.Rmd from line 38 to line 76
+head (species_hs)
+```
+##We filter the spcies_hs dataframe by the loiczid that we want to analyse
+```{r setup}
+zoom_species_hs <- filter (species_hs, species_hs$loiczid %in% zoom_loiczid)
+unique (zoom_species_hs$loiczid) %>% length() #209
+unique (zoom_species_hs$am_sid) %>% length()#1184
+```
+
+##We filter the probability value to 1
+```{r setup}
+occurrence <- filter(zoom_species_hs, prob ==1)
+unique (occurrence$am_sid) %>% length()#844
+
+head (occurrence)
+colnames (occurrence)
+str (occurrence)
+
+zoom_species_hs <- occurrence
+rm (occurrence)
+```
+
+##Filter is keeping all levels so, we create a new dataframe to avoid that
+```{r setup, include=FALSE}
+zoom_species_hs_ok<-as.data.frame( matrix(NA, nrow(zoom_species_hs), ncol(zoom_species_hs), 
+                  dimnames=list( row.names(zoom_species_hs), names(zoom_species_hs) ) ) ) 
+#am_sid
+zoom_species_hs_ok [,"am_sid"]<-as.character(zoom_species_hs [,"am_sid"])
+zoom_species_hs_ok[,"am_sid"]<-factor(zoom_species_hs_ok[,"am_sid"], ordered = TRUE)
+#loiczid
+zoom_species_hs_ok [,"loiczid"]<-as.integer(zoom_species_hs [,"loiczid"])
+#prob
+zoom_species_hs_ok[,"prob"]<-as.numeric(zoom_species_hs[,"prob"] )
+#class
+zoom_species_hs_ok [,"class"]<-as.character(zoom_species_hs [,"class"])
+zoom_species_hs_ok[,"class"]<-factor(zoom_species_hs_ok[,"class"], ordered = TRUE)
+#order
+zoom_species_hs_ok [,"order"]<-as.character(zoom_species_hs [,"order"])
+zoom_species_hs_ok[,"order"]<-factor(zoom_species_hs_ok[,"order"], ordered = TRUE)
+#family
+zoom_species_hs_ok [,"family"]<-as.character(zoom_species_hs [,"family"])
+zoom_species_hs_ok[,"family"]<-factor(zoom_species_hs_ok[,"family"], ordered = TRUE)
+#Loo
+zoom_species_hs_ok[,"Loo"]<-as.numeric( zoom_species_hs[,"Loo"] )
+#K
+zoom_species_hs_ok[,"K"]<-as.numeric( zoom_species_hs[,"K"] )
+#Winfinity
+zoom_species_hs_ok[,"Winfinity"]<-as.numeric( zoom_species_hs[,"Winfinity"] )
+#tmax
+zoom_species_hs_ok[,"tmax"]<-as.numeric( zoom_species_hs[,"tmax"] )
+#tm
+zoom_species_hs_ok[,"tm"]<-as.numeric( zoom_species_hs[,"tm"] )
+#M
+zoom_species_hs_ok[,"M"]<-as.numeric( zoom_species_hs[,"M"] )
+#Lm
+zoom_species_hs_ok[,"Lm"]<-as.numeric( zoom_species_hs[,"Lm"] )
+#depthrangedeep
+zoom_species_hs_ok[,"depthrangedeep"]<-as.numeric( zoom_species_hs[,"depthrangedeep"] )
+#demerspelag  
+zoom_species_hs_ok [,"demerspelag"]<-as.character(zoom_species_hs [,"demerspelag"])
+zoom_species_hs_ok[,"demerspelag"]<-factor(zoom_species_hs_ok[,"demerspelag"], ordered = TRUE)
+#EnvTemp       
+zoom_species_hs_ok [,"EnvTemp"]<-as.character(zoom_species_hs [,"EnvTemp"])
+zoom_species_hs_ok[,"EnvTemp"]<-factor(zoom_species_hs_ok[,"EnvTemp"], ordered = TRUE)
+#FeedingType   
+zoom_species_hs_ok [,"FeedingType"]<-as.character(zoom_species_hs [,"FeedingType"])
+zoom_species_hs_ok[,"FeedingType"]<-factor(zoom_species_hs_ok[,"FeedingType"], ordered = TRUE)
+#bodyshape     
+zoom_species_hs_ok [,"bodyshape"]<-as.character(zoom_species_hs [,"bodyshape"])
+#we rename the levels into new categories names
+table (zoom_species_hs_ok$bodyshape)
+
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="eel-like"),"bodyshape"]<-"eel_like"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="elongated"),"bodyshape"]<-"elongated"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"fusiform_normal"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"short_andor_deep"
+zoom_species_hs_ok[which(zoom_species_hs_ok[,"bodyshape"]=="other"),"bodyshape"]<-"other"
+
+zoom_species_hs_ok[,"bodyshape"]<-factor(zoom_species_hs_ok[,"bodyshape"], levels=c("eel_like", "elongated", "fusiform_normal", "short_andor_deep", "other" ), ordered = TRUE )
+
+table (zoom_species_hs_ok$bodyshape)
+
+#IUCN_Code     
+zoom_species_hs_ok [,"IUCN_Code"]<-as.character(zoom_species_hs [,"IUCN_Code"])
+zoom_species_hs_ok[,"IUCN_Code"]<-factor(zoom_species_hs_ok[,"IUCN_Code"], ordered = TRUE)
+#Resilience    
+zoom_species_hs_ok [,"Resilience"]<-as.character(zoom_species_hs [,"Resilience"])
+zoom_species_hs_ok[,"Resilience"]<-factor(zoom_species_hs_ok[,"Resilience"], ordered = TRUE)
+#pd50          
+zoom_species_hs_ok[,"pd50"]<-as.numeric( zoom_species_hs[,"pd50"] ) 
+#vulnerability 
+zoom_species_hs_ok[,"vulnerability"]<-as.numeric( zoom_species_hs[,"vulnerability"] ) 
+#importance    
+zoom_species_hs_ok [,"importance"]<-as.character(zoom_species_hs [,"importance"])
+zoom_species_hs_ok[,"importance"]<-factor(zoom_species_hs_ok[,"importance"], ordered = TRUE) 
+#pricecateg    
+zoom_species_hs_ok [,"pricecateg"]<-as.character(zoom_species_hs [,"pricecateg"])
+zoom_species_hs_ok[,"pricecateg"]<-factor(zoom_species_hs_ok[,"pricecateg"], ordered = TRUE)
+
+str (zoom_species_hs_ok)
+
+```
+##We remove the original data filtered dataset
+```{r setup}
+rm (zoom_species_hs)
+```
+##We create a subset of the zoom_species_hs_ok in order to create the assemblage matrix (loiczid/spps probability)
+```{r setup}
+zoom_species_hs_subset <- subset(zoom_species_hs_ok , select=c("am_sid", "loiczid","prob"))
+
+head (zoom_species_hs_subset)
+as.tibble (zoom_species_hs_subset)
+
+unique (zoom_species_hs_subset$am_sid) %>% length()#691
+
+#we spread the data
+zoom_spread_loiczid_spp <- zoom_species_hs_subset %>%
+    spread(am_sid, prob, fill = 0)
+
+as.tibble (zoom_spread_loiczid_spp)
+#we save the data
+write.csv (zoom_spread_loiczid_spp, file = "zoom_assemblage_iberian_peninsula.csv")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF ALL SPECIES IN THE SELECTED EXTEND ()
+#------------------------------------------------------------------------------------- #
+```{r setup}
+zoom_spp <-  zoom_species_hs_ok %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (zoom_spp)
+unique(zoom_species_hs_ok$am_sid) %>% length()#844
+unique(zoom_species_hs_ok$loiczid) %>% length()#209
+unique(zoom_spp$loiczid) %>% length()#209
+```
+##We create the zoom map
+```{r setup}
+zoom_basemap <- raster (ext= extent (c(-10,4, 36, 44)), res=0.5)
+values (zoom_basemap) <- zoom_loiczid
+zoom_basemap
+plot (zoom_basemap)
+
+zoom_spp_map <- subs (zoom_basemap, zoom_spp, by= "loiczid", which= "n_spp")
+
+plot (zoom_spp_map)
+```
+
+##--------------------- SMALLER EXTENT: CANTABRIAN COAST (cc) -----------------------------------------------------##
+
+##We filter the data frame to the extent we are interested in: Cantabrian Coast: (ext= extent (c(-8.5,4, 43, 43.5))
+```{r setup}
+zoom_base_df_cc1 <- filter(base_df, between(base_df$long, -8.5,4))
+zoom_base_df_cc <- filter(zoom_base_df_cc1, between(zoom_base_df_cc1$lat, 43, 43.5))
+```
+##We remove the first filtered dataframe
+```{r setup}
+rm(zoom_base_df_cc1)
+```
+##We look at our new zoomed data frame
+```{r setup}
+head (zoom_base_df_cc)
+str (zoom_base_df_cc)
+unique (zoom_base_df_cc$loiczid) %>% length ()
+summary (zoom_base_df_cc$lat)
+summary (zoom_base_df_cc$long)
+```
+##We create a vector with loiczid values for the extent we are interested in
+```{r setup}
+zoom_loiczid_cc<- zoom_base_df_cc$loiczid
+head (zoom_loiczid_cc)
+```
+
+##We filter "species_hs" dataframe in order to get whole information about the different species that are located in the are we have selected
+```{r setup}
+#species_hs <- run 7_Mapping traits.Rmd from line 38 to line 76
+head (species_hs)
+```
+##We filter the spcies_hs dataframe by the loiczid that we want to analyse
+```{r setup}
+zoom_species_hs_cc <- filter (species_hs, species_hs$loiczid %in% zoom_loiczid_cc)
+unique (zoom_species_hs_cc$loiczid) %>% length() #10
+unique (zoom_species_hs_cc$am_sid) %>% length()#724
+```
+
+##We filter the probability value to 1
+```{r setup}
+occurrence <- filter(zoom_species_hs_cc, prob ==1)
+unique (occurrence$am_sid) %>% length()#279
+
+head (occurrence)
+colnames (occurrence)
+str (occurrence)
+
+zoom_species_hs_cc <- occurrence
+rm (occurrence)
+```
+
+##Filter is keeping all levels so, we create a new dataframe to avoid that
+```{r setup, include=FALSE}
+zoom_species_hs_ok_cc<-as.data.frame( matrix(NA, nrow(zoom_species_hs_cc), ncol(zoom_species_hs_cc), 
+                  dimnames=list( row.names(zoom_species_hs_cc), names(zoom_species_hs_cc) ) ) ) 
+#am_sid
+zoom_species_hs_ok_cc [,"am_sid"]<-as.character(zoom_species_hs_cc [,"am_sid"])
+zoom_species_hs_ok_cc[,"am_sid"]<-factor(zoom_species_hs_ok_cc[,"am_sid"], ordered = TRUE)
+#loiczid
+zoom_species_hs_ok_cc [,"loiczid"]<-as.integer(zoom_species_hs_cc [,"loiczid"])
+#prob
+zoom_species_hs_ok_cc[,"prob"]<-as.numeric(zoom_species_hs_cc[,"prob"] )
+#class
+zoom_species_hs_ok_cc [,"class"]<-as.character(zoom_species_hs_cc [,"class"])
+zoom_species_hs_ok_cc[,"class"]<-factor(zoom_species_hs_ok_cc[,"class"], ordered = TRUE)
+#order
+zoom_species_hs_ok_cc [,"order"]<-as.character(zoom_species_hs_cc [,"order"])
+zoom_species_hs_ok_cc[,"order"]<-factor(zoom_species_hs_ok_cc[,"order"], ordered = TRUE)
+#family
+zoom_species_hs_ok_cc [,"family"]<-as.character(zoom_species_hs_cc [,"family"])
+zoom_species_hs_ok_cc[,"family"]<-factor(zoom_species_hs_ok_cc[,"family"], ordered = TRUE)
+#Loo
+zoom_species_hs_ok_cc[,"Loo"]<-as.numeric( zoom_species_hs_cc[,"Loo"] )
+#K
+zoom_species_hs_ok_cc[,"K"]<-as.numeric( zoom_species_hs_cc[,"K"] )
+#Winfinity
+zoom_species_hs_ok_cc[,"Winfinity"]<-as.numeric( zoom_species_hs_cc[,"Winfinity"] )
+#tmax
+zoom_species_hs_ok_cc[,"tmax"]<-as.numeric( zoom_species_hs_cc[,"tmax"] )
+#tm
+zoom_species_hs_ok_cc[,"tm"]<-as.numeric( zoom_species_hs_cc[,"tm"] )
+#M
+zoom_species_hs_ok_cc[,"M"]<-as.numeric( zoom_species_hs_cc[,"M"] )
+#Lm
+zoom_species_hs_ok_cc[,"Lm"]<-as.numeric( zoom_species_hs_cc[,"Lm"] )
+#depthrangedeep
+zoom_species_hs_ok_cc[,"depthrangedeep"]<-as.numeric( zoom_species_hs_cc[,"depthrangedeep"] )
+#demerspelag  
+zoom_species_hs_ok_cc [,"demerspelag"]<-as.character(zoom_species_hs_cc [,"demerspelag"])
+zoom_species_hs_ok_cc[,"demerspelag"]<-factor(zoom_species_hs_ok_cc[,"demerspelag"], ordered = TRUE)
+#EnvTemp       
+zoom_species_hs_ok_cc [,"EnvTemp"]<-as.character(zoom_species_hs_cc [,"EnvTemp"])
+zoom_species_hs_ok_cc[,"EnvTemp"]<-factor(zoom_species_hs_ok_cc[,"EnvTemp"], ordered = TRUE)
+#FeedingType   
+zoom_species_hs_ok_cc [,"FeedingType"]<-as.character(zoom_species_hs_cc [,"FeedingType"])
+zoom_species_hs_ok_cc[,"FeedingType"]<-factor(zoom_species_hs_ok_cc[,"FeedingType"], ordered = TRUE)
+#bodyshape     
+zoom_species_hs_ok_cc [,"bodyshape"]<-as.character(zoom_species_hs_cc [,"bodyshape"])
+#we rename the levels into new categories names
+table (zoom_species_hs_ok_cc$bodyshape)
+
+zoom_species_hs_ok_cc[which(zoom_species_hs_ok_cc[,"bodyshape"]=="eel-like"),"bodyshape"]<-"eel_like"
+zoom_species_hs_ok_cc[which(zoom_species_hs_ok_cc[,"bodyshape"]=="elongated"),"bodyshape"]<-"elongated"
+zoom_species_hs_ok_cc[which(zoom_species_hs_ok_cc[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"fusiform_normal"
+zoom_species_hs_ok_cc[which(zoom_species_hs_ok_cc[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"short_andor_deep"
+zoom_species_hs_ok_cc[which(zoom_species_hs_ok_cc[,"bodyshape"]=="other"),"bodyshape"]<-"other"
+
+zoom_species_hs_ok_cc[,"bodyshape"]<-factor(zoom_species_hs_ok_cc[,"bodyshape"], levels=c("eel_like", "elongated", "fusiform_normal", "short_andor_deep", "other" ), ordered = TRUE )
+
+table (zoom_species_hs_ok_cc$bodyshape)
+
+#IUCN_Code     
+zoom_species_hs_ok_cc [,"IUCN_Code"]<-as.character(zoom_species_hs_cc [,"IUCN_Code"])
+zoom_species_hs_ok_cc[,"IUCN_Code"]<-factor(zoom_species_hs_ok_cc[,"IUCN_Code"], ordered = TRUE)
+
+#Resilience    
+zoom_species_hs_ok_cc [,"Resilience"]<-as.character(zoom_species_hs_cc [,"Resilience"])
+zoom_species_hs_ok_cc[,"Resilience"]<-factor(zoom_species_hs_ok_cc[,"Resilience"], ordered = TRUE)
+#pd50          
+zoom_species_hs_ok_cc[,"pd50"]<-as.numeric( zoom_species_hs_cc[,"pd50"] ) 
+#vulnerability 
+zoom_species_hs_ok_cc[,"vulnerability"]<-as.numeric( zoom_species_hs_cc[,"vulnerability"] ) 
+#importance    
+zoom_species_hs_ok_cc [,"importance"]<-as.character(zoom_species_hs_cc [,"importance"])
+zoom_species_hs_ok_cc[,"importance"]<-factor(zoom_species_hs_ok_cc[,"importance"], ordered = TRUE) 
+#pricecateg    
+zoom_species_hs_ok_cc [,"pricecateg"]<-as.character(zoom_species_hs_cc [,"pricecateg"])
+zoom_species_hs_ok_cc[,"pricecateg"]<-factor(zoom_species_hs_ok_cc[,"pricecateg"], ordered = TRUE)
+
+str (zoom_species_hs_ok_cc)
+
+```
+##We remove the original data filtered dataset
+```{r setup}
+rm (zoom_species_hs_cc)
+```
+##We create a subset of the zoom_species_hs_ok_cc in order to create the assemblage matrix (loiczid/spps probability)
+```{r setup}
+zoom_species_hs_cc_subset <- subset(zoom_species_hs_ok_cc , select=c("am_sid", "loiczid","prob"))
+
+head (zoom_species_hs_cc_subset)
+as.tibble (zoom_species_hs_cc_subset)
+
+unique (zoom_species_hs_cc_subset$am_sid) %>% length()#279
+
+#we spread the data
+zoom_spread_loiczid_spp_cc <- zoom_species_hs_cc_subset %>%
+    spread(am_sid, prob, fill = 0)
+
+as.tibble (zoom_spread_loiczid_spp_cc)
+#we save the data
+write.csv (zoom_spread_loiczid_spp, file = "zoom_assemblage_cantabrian_coast.csv")
+```
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF ALL SPECIES IN THE SELECTED EXTEND ()
+#------------------------------------------------------------------------------------- #
+```{r setup}
+zoom_spp_cc <-  zoom_species_hs_ok_cc %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+
+head(zoom_spp_cc)
+  
+head (zoom_spp_cc)
+unique(zoom_species_hs_ok_cc$am_sid) %>% length()#279
+unique(zoom_species_hs_ok_cc$loiczid) %>% length()#10
+unique(zoom_spp_cc$loiczid) %>% length()#10
+```
+##We create the zoom map
+```{r setup}
+zoom_basemap_cc <- raster (ext= extent (c(-8.5,4, 43, 43.5)), res=0.5)
+values (zoom_basemap_cc) <- zoom_loiczid_cc
+zoom_basemap_cc
+plot (zoom_basemap_cc)
+
+zoom_spp_map_cc <- subs (zoom_basemap_cc, zoom_spp_cc, by= "loiczid", which= "n_spp")
+
+plot (zoom_spp_map_cc)
+```
+#---------------SUBSETTING NUMBER OF SPECIES ------------------------------------------------------------------------#
+#We want to create a database containing 50 random species-------#
+#we read the traits dataframe
+```{r}
+traits_FD<- read.csv ("/home/valle/github_annex/traits_FD_ok.csv") 
+as.tibble (traits_FD)
+colnames (traits_FD)
+summary (traits_FD)
+colnames(traits_FD)[colnames(traits_FD)=="X"] <- "am_sid"
+as.tibble (traits_FD)
+```
+#we create a vector with those species that appear at the cantabrian coast (cc)
+```{r}
+am_sid_cc <- unique(zoom_species_hs_ok_cc$am_sid)
+am_sid_cc
+```
+#we filter the traits dataframe to select only the species that are present in the cc
+```{r}
+traits_sp_cc <- filter (traits_FD, traits_FD$am_sid %in% am_sid_cc)
+head (traits_sp_cc)
+unique(traits_sp_cc$am_sid) %>% length()#279
+```
+#now we select 50 random rows in order to create a easy to handle dataframe
+```{r}
+traits_sp_cc_50_random <-traits_sp_cc[sample(nrow(traits_sp_cc),50),]
+```
+#we save the data
+```{r}
+write.csv (traits_sp_cc_50_random, file = "traits_matrix_cc_50_random.csv")
+```
+#and we select the same 50 species from the hs dataframe
+```{r}
+head (zoom_species_hs_cc_subset)
+as.tibble (zoom_species_hs_cc_subset)
+
+head (traits_sp_cc_50_random)
+
+species_hs_cc_50_random <- filter (zoom_species_hs_cc_subset, zoom_species_hs_cc_subset$am_sid %in% traits_sp_cc_50_random$am_sid)
+
+head (species_hs_cc_50_random)
+
+unique (species_hs_cc_50_random$am_sid ) %>%  length ()
+```
+#we spread the data
+```{r}
+species_hs_cc_50_random_spread <- species_hs_cc_50_random %>%
+    spread(am_sid, prob, fill = 0)
+
+as.tibble (species_hs_cc_50_random_spread)
+
+unique (species_hs_cc_50_random_spread$loiczid) %>%  length ()
+```
+#we save the data
+```{r}
+
+write.csv (species_hs_cc_50_random_spread, file = "presence_absence_matrix_cc_50_random.csv")
+```
+
+
+
+
+
+
+
+

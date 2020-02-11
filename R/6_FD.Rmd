@@ -88,7 +88,7 @@ write.csv (assemblage_ok, file = "assemblages_matrix_ok.csv")
 
 #2.- FUNCTIONAL DIVERSITY 
 ```{r}
-traits<- read.csv ("traits_spp_ok .csv") 
+traits<- read.csv ("/home/valle/github_annex/traits_spp_ok.csv") 
 assemblage <- read.csv('assemblages_matrix_ok.csv') 
 
 write.csv(summary(traits),"summary_traits.csv")
@@ -238,9 +238,9 @@ head (traits_FD)
 write.csv (traits_FD , file = "traits_FD.csv")
 
 # importing species raw trait values from a csv file: row names are in the column named 'am_sid'
-traits_FD<-read.csv("traits_FD.csv", header=T, row.names = "am_sid")
+traits_FD<-read.csv("/home/valle/github_annex/traits_FD.csv", header=T, row.names = "am_sid")
 head (traits_FD)
-traits_FD<-select(traits_FD, -"X", -"class", -"order", -"family") 
+traits_FD$X <- NULL 
 
 # ASSEMBLAGE MATRIX 
 # importing data of species in assemblages from a csv file: loiczid are in the first column and will be used as row names
@@ -286,8 +286,13 @@ traits_FD_ok[,"demerspelag"]<-factor(traits_FD_ok[,"demerspelag"], levels=c("dem
 
 traits_FD_ok [,"bodyshape"]<-as.character(traits_FD [,"bodyshape"])
 traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="other (see remarks)"),"bodyshape"]<-"other"
+traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="eel-like"),"bodyshape"]<-"eel_like"
+traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="elongated"),"bodyshape"]<-"elongated"
+traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="fusiform / normal"),"bodyshape"]<-"fusiform_normal"
+traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="short and / or deep"),"bodyshape"]<-"short_andor_deep"
+traits_FD_ok[which(traits_FD_ok[,"bodyshape"]=="other"),"bodyshape"]<-"other"
 
-traits_FD_ok[,"bodyshape"]<-factor(traits_FD_ok[,"bodyshape"], levels=c("short and / or deep", "fusiform / normal", "elongated", "eel-like", "other" ), ordered = TRUE )
+traits_FD_ok[,"bodyshape"]<-factor(traits_FD_ok[,"bodyshape"], levels=c("eel_like", "elongated", "fusiform_normal", "short_andor_deep", "other" ), ordered = TRUE )
 
 #IUCN TO 7 levels, LR/lc to LC and LR/nt to NT
 
@@ -314,8 +319,15 @@ traits_FD_ok [,"EnvTemp"]<-as.character(traits_FD [,"EnvTemp"])
 
 traits_FD_ok[,"EnvTemp"]<-factor(traits_FD_ok[,"EnvTemp"], levels=c("boreal", "deep-water", "polar", "subtropical", "temperate", "tropical"), ordered = TRUE )
 
+#class, order and family, feedingtype, importance, pricecateg and am_sid no changes
 
-traits_FD_ok <- select (traits_FD_ok, -"FeedingType", -"importance", -"pricecateg")
+traits_FD_ok [,"class"]<-as.character(traits_FD [,"class"])
+traits_FD_ok [,"order"]<-as.character(traits_FD [,"order"])
+traits_FD_ok [,"family"]<-as.character(traits_FD [,"family"])
+traits_FD_ok [,"FeedingType"]<-as.character(traits_FD [,"FeedingType"])
+traits_FD_ok [,"importance"]<-as.character(traits_FD [,"importance"])
+traits_FD_ok [,"pricecateg"]<-as.character(traits_FD [,"pricecateg"])
+traits_FD_ok [,"am_sid"]<-as.character(traits_FD [,"am_sid"])
 
 # ordinal traits converted to "ordered" mode
 
@@ -333,10 +345,10 @@ traits_FD_ok[,"vulnerability"]<-as.numeric( traits_FD[,"vulnerability"] )
 summary(traits_FD_ok)
 
 #remove those traits that contain NAs and those traits 
-traits_FD_ok <- select (traits_FD_ok, -"bodyshape", -"Resilience", -"pd50", -"depthrangedeep")
+#traits_FD_ok <- select (traits_FD_ok, -"bodyshape", -"Resilience", -"pd50", -"depthrangedeep")
 
 #remove those traits that do not have biological significance
-traits_FD_ok <- select (traits_FD_ok, -"IUCN_Code", -"Resilience", -"importance", -"pricecateg")
+#traits_FD_ok <- select (traits_FD_ok, -"IUCN_Code", -"Resilience", -"importance", -"pricecateg")
 
 #save the traits matrix
 write.csv (traits_FD_ok , file = "traits_FD_ok.csv")

@@ -35,20 +35,18 @@ getwd()
 #------------------------------------------------------------------------------------- #
 ```{r setup}
 
-traits<- read.csv ("/home/valle/github_annex/traits_FD_ok.csv") 
-as.tibble (traits)
-colnames (traits)
-summary (traits)
+traits_FD<- read.csv ("/home/valle/github_annex/traits_FD_ok.csv") 
+as.tibble (traits_FD)
+colnames (traits_FD)
+summary (traits_FD)
 
-#Editing colnames
-traits <- traits %>%
-  select(am_sid = X, Loo = Loo, K = K, Winfinity = Winfinity, tmax = tmax, tm =tm, M = M, Lm = Lm, demerspelag = demerspelag, EnvTemp = EnvTemp) 
+colnames(traits_FD)[colnames(traits_FD)=="X"] <- "am_sid"
 
 #Key by "am_sid"
-traits_keyed <- data.table(traits, key = "am_sid") 
+traits_keyed <- data.table(traits_FD, key = "am_sid") 
 
 #remove not keyed dataframe
-rm (traits)
+rm (traits_FD)
 ```
 #------------------------------------------------------------------------------------- #
 # LOADING AQUAMAPS DATA 
@@ -65,7 +63,7 @@ colnames (hs)
 hs_keyed <- data.table(hs,  key = "am_sid")
 head (hs_keyed)
 class(hs_keyed)
-#rmeove not keyed dataframe
+#remove not keyed dataframe
 rm(hs)
 ```
 #------------------------------------------------------------------------------------- #
@@ -86,16 +84,21 @@ rm (hs_keyed)
 #unique am_sid values
 unique (species_hs$am_sid) %>% length()#12204
 
-#is there any NA?
-table(is.na (species_hs))
-
 #which is the structure
 str(species_hs)
+
+table (species_hs$bodyshape)
 
 #levels of those variables that are factors
 table (species_hs$demerspelag)
 
 table (species_hs$EnvTemp)
+
+#save 
+#write.csv (species_hs , file = "species_hs.csv")
+
+#read 
+#species_hs <- read.csv('/home/valle/github_annex/species_hs.csv')
 ```
 #------------------------------------------------------------------------------------- #
 # Creating a raster with LOICID value #
@@ -146,6 +149,8 @@ all_demerspelag <- species_hs %>%
   group_by (loiczid)%>%
   summarize(n_distinct(demerspelag))
 
+summarin()
+
 head (all_demerspelag)
 
 all_demerspelag_map <- subs (basemap, all_demerspelag, by= "loiczid", which= "n_distinct(demerspelag)")
@@ -184,32 +189,203 @@ writeRaster(all_EnvTemp, "all_EnvTemp", format = "GTiff")
 summary (species_hs$Loo)
 
 #Create 4 different group intervals
-species_hs$Loo_groups<-cut(species_hs$Loo, c(0,25,50,100,1500), labels=c(1:4))
+species_hs$Loo_groups<-cut(species_hs$Loo, c(0,25,50,100,1500), labels=c("1", "2", "3", "4"))
 species_hs$Loogroups<-cut(species_hs$Loo, c(0,25,50,100,1500), labels=c("small", "medium", "large", "very_large"))
-
 head (species_hs)
 
 summary (species_hs$Loo_groups)
 #       1        2        3        4 
 #27838666 19657395  8540381  5024015 
+#0-25       25-50     50-100    100-1500
 
-#save 
-#write.csv (species_hs , file = "species_hs.csv")
-
-#read 
-#species_hs <- read.csv('/home/valle/github_annex/species_hs.csv')
-
-as.tibble (species_hs)
-colnames(species_hs)
-
-asdf <- select (species_hs, c (loiczid, am_sid, Loogroups))
-head (asdf)
-
-all_Loo <- asdf %>%
+all_Loo <- species_hs %>%
   group_by (loiczid)%>%
   summarize(n_distinct(Loogroups))
 
+head (all_Loo)
+
+table (all_Loo$"n_distinct(Loogroups)")
+#     1      2      3      4 
+#  5158   1511  14574 147457
+
+all_Loo_map <- subs (basemap, all_Loo, by= "loiczid", which= "n_distinct(Loogroups)")
+plot (all_Loo_map, col=rainbow(4))
+
 writeRaster(all_Loo, "all_Loo", format = "GTiff")
 ```  
-  
+#MAPPING SMALL FISH 0-25
+```{r setup}
+smallfish <- subset (species_hs, species_hs$Loo_groups == 1 )
+unique (smallfish$am_sid) %>% length()#4025
 
+all_smallfish <-  smallfish %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (all_smallfish)
+
+
+allsmallfish_map <- subs (basemap, all_smallfish, by= "loiczid", which= "n_spp")
+
+plot (allsmallfish_map)
+
+summary (all_smallfish$n_spp)
+
+writeRaster(allsmallfish_map, "allsmallfish_map", format = "GTiff")
+```
+#MAPPING MEDIUM FISH 25-50
+```{r setup}
+mediumfish <- subset (species_hs, species_hs$Loo_groups == 2 )
+unique (mediumfish$am_sid) %>% length()#5348
+
+all_mediumfish <-  mediumfish %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (all_mediumfish)
+
+allmediumfish_map <- subs (basemap, all_mediumfish, by= "loiczid", which= "n_spp")
+
+plot (allmediumfish_map)
+
+summary (all_mediumfish$n_spp)
+
+writeRaster(allmediumfish_map, "allmediumfish_map", format = "GTiff")
+```
+#MAPPING LARGE FISH 50-100
+```{r setup}
+largefish <- subset (species_hs, species_hs$Loo_groups == 3 )
+unique (largefish$am_sid) %>% length()#1899
+
+all_largefish <-  largefish %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (all_largefish)
+
+alllargefish_map <- subs (basemap, all_largefish, by= "loiczid", which= "n_spp")
+
+plot (alllargefish_map)
+
+summary (all_largefish$n_spp)
+
+writeRaster(alllargefish_map, "alllargefish_map", format = "GTiff")
+```
+#MAPPING VERY LARGE FISH 100-1500
+```{r setup}
+verylargefish <- subset (species_hs, species_hs$Loo_groups == 4 )
+unique (verylargefish$am_sid) %>% length()#932
+
+all_verylargefish <-  verylargefish %>%
+  group_by (loiczid)%>%
+  summarize(n_spp = n())
+  
+head (all_verylargefish)
+
+allverylargefish_map <- subs (basemap, all_verylargefish, by= "loiczid", which= "n_spp")
+
+plot (allverylargefish_map)
+
+summary (all_verylargefish$n_spp)
+
+writeRaster(allverylargefish_map, "allverylargefish_map", format = "GTiff")
+```
+#MAPPING PROPORTION
+
+proportion_small <- (allsmallfish_map*100)/allspecies_map
+plot (proportion_small)
+
+proportion_medium <- (allmediumfish_map*100)/allspecies_map
+plot (proportion_medium)
+
+proportion_large <- (alllargefish_map*100)/allspecies_map
+plot (proportion_large)
+
+proportion_verylarge <- (allverylargefish_map*100)/allspecies_map
+plot (proportion_verylarge)
+
+proportion_all <- (allspecies_map*100)/allspecies_map
+plot (proportion_all)
+
+par(mfrow=c(2,5))
+
+plot (allspecies_map,
+      main="Distribution of all species",
+      axes=FALSE)
+plot (allsmallfish_map,
+      main="Distribution of under 25 cm group")
+plot (allmediumfish_map,
+      main="Distribution of 25 to 50 cm group")
+plot (alllargefish_map,
+      main="Distribution of 50 to 100 cm group")
+plot (allverylargefish_map,
+      main="Distribution of 100 to 1500 cm group")
+
+plot (proportion_all,
+      col=terrain.colors(10),
+      main="Proportion of all fish compared to all fish",
+      axes=FALSE)
+plot (proportion_small,
+      col=terrain.colors(10),
+      main="Proportion of under 25 cm fish compared to all fish",
+      axes=FALSE)
+plot (proportion_medium,
+      col=terrain.colors(10),
+      main="Proportion of 25 to 50 cm fish compared to all fish",
+      axes=FALSE)
+plot (proportion_large,
+      col=terrain.colors(10),
+      main="Proportion of 50 to 100 cm fish compared to all fish",
+      axes=FALSE)
+plot (proportion_verylarge,
+      col=terrain.colors(10),
+      main="Proportion of 100 to 1500 cm fish compared to all fish",
+      axes=FALSE)
+#------------------------------------------------------------------------------------- #
+#MAPPING THE DISTRIBUTION OF BODYSHAPE TRAIT RICHNESS
+#------------------------------------------------------------------------------------- #
+#Summarize 
+table (species_hs$bodyshape)
+#       eel_like        elongated  fusiform_normal short_andor_deep            other 
+#         4682026         27178670         13071362          9486940          1472631
+
+sum(is.na(species_hs$bodyshape)) #5168828
+
+asdf <- subset (species_hs, species_hs$loiczid=="11858")
+
+
+all_bodyshape <- species_hs %>%
+  group_by (loiczid)%>%
+  summarize(n_tot = n(), 
+  n_dist = n_distinct(bodyshape[!is.na(bodyshape)]))
+  
+all_bodyshape_map <- subs (basemap, all_bodyshape, by= "loiczid", which= "n_dist")
+plot (all_bodyshape_map, col=rainbow(5))
+
+sum (all_bodyshape$n_tot)
+table (all_bodyshape$n_dist)
+
+writeRaster(all_Loo, "all_Loo", format = "GTiff")
+
+all_bodyshape_pct <- species_hs %>%
+  group_by (loiczid)%>%
+  summarize(n_tot = n(), 
+  pct_eel = (sum (bodyshape=="eel_like")/n_tot),
+  pct_elon = (sum (bodyshape=="elongated")/n_tot),
+  pct_fusi = (sum (bodyshape=="fusiform_normal")/n_tot),
+  pct_short = (sum (bodyshape=="short_andor_deep")/n_tot),
+  pct_other = (100 - "pct_ell" - "pct_elon" - "pct_fusi" - "pct_short" - "pct-short"),
+  n_dist = n_distinct(bodyshape))
+
+#Error in 100 - "pct_ell" : non-numeric argument to binary operator
+
+head (all_Loo)
+
+table (all_Loo$"n_distinct(Loogroups)")
+#     1      2      3      4 
+#  5158   1511  14574 147457
+
+all_Loo_map <- subs (basemap, all_Loo, by= "loiczid", which= "n_distinct(Loogroups)")
+plot (all_Loo_map, col=rainbow(4))
+
+writeRaster(all_Loo, "all_Loo", format = "GTiff")
